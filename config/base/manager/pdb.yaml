@@ -1,0 +1,13 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: locations-manager
+  labels:
+    app.kubernetes.io/name: locations
+    app.kubernetes.io/managed-by: kustomize
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      control-plane: locations
+      app.kubernetes.io/name: locations

@@ -1,0 +1,7 @@
+apiVersion: locations.miloapis.com/v1alpha1
+kind: Location
+metadata:
+  name: example-location
+  namespace: default
+spec:
+  description: "An example location managed by the locations."

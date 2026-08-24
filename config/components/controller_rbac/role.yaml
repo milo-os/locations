@@ -1,0 +1,32 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: locations-manager
+rules:
+- apiGroups:
+  - locations.miloapis.com
+  resources:
+  - locations
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - locations.miloapis.com
+  resources:
+  - locations/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - locations.miloapis.com
+  resources:
+  - locations/status
+  verbs:
+  - get
+  - patch
+  - update
