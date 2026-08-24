@@ -6,3 +6,18 @@ webhookServer: {}
 # kubeconfigPath points at the Milo control plane API server.
 # Leave empty to use in-cluster config (default when deployed alongside the API server).
 # kubeconfigPath: /etc/milo/kubeconfig
+
+# The publisher copies each Location onto the federation hub as a
+# ServingLocation, so every cell is told which location it serves. It stays off
+# until hubKubeconfigPath is set, and must be set on exactly one deployment.
+#
+# locationPublisher:
+#   hubKubeconfigPath: /etc/federation/kubeconfig
+#   safetyResyncPeriod: 30m
+#   locationScopedResources:
+#     - apiVersion: networking.datumapis.com/v1alpha
+#       kind: NetworkContext
+#       locationLabel: networking.datumapis.com/location
+#     - apiVersion: networking.datumapis.com/v1alpha
+#       kind: Subnet
+#       locationLabel: networking.datumapis.com/location

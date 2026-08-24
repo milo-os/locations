@@ -1,7 +1,17 @@
 apiVersion: locations.miloapis.com/v1alpha1
 kind: Location
 metadata:
-  name: example-location
-  namespace: default
+  name: us-east-1
 spec:
-  description: "An example location managed by the locations."
+  locationClassName: datum-managed
+  topology:
+    topology.datum.net/city-code: IAD
+    topology.datum.net/region: us-east-1
+  provider:
+    gcp:
+      projectId: example-project
+      region: us-east4
+      zone: us-east4-a
+  coordinates:
+    latitude: "38.9445"
+    longitude: "-77.4558"
