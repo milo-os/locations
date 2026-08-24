@@ -26,3 +26,8 @@ cover.out
 .task/
 
 # Claude AI
+
+# UI
+ui/node_modules/
+ui/build/
+ui/.cache/

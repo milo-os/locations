@@ -17,8 +17,9 @@ import {
   TableRow,
 } from "@datum-cloud/datum-ui/table";
 import { fetchK8s } from "~/lib/k8s.server";
-import { phaseBadgeProps, relativeAge } from "~/lib/format";
+import { conditionBadgeProps, relativeAge } from "~/lib/format";
 import type { KubeList, Location } from "~/lib/types";
+import { CITY_CODE_KEY, REGION_KEY, readyCondition } from "~/lib/types";
 import { locationsPath } from "~/lib/api";
 
 interface LoaderData {
@@ -44,7 +45,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
 function matchesQuery(location: Location, q: string): boolean {
   if (!q) return true;
   const needle = q.toLowerCase();
-  return [location.metadata.name, location.spec.description ?? ""].some((h) =>
+  return [
+    location.metadata.name,
+    location.spec.topology?.[CITY_CODE_KEY] ?? "",
+    location.spec.topology?.[REGION_KEY] ?? "",
+  ].some((h) =>
     h.toLowerCase().includes(needle)
   );
 }
@@ -62,7 +67,7 @@ export default function LocationsIndex() {
     <div className="flex flex-col gap-4 px-6 py-4">
       <PageTitle
         title="Locations"
-        description="Locations managed by the controller on the Milo control plane."
+        description="Every place the platform can serve from."
         actionsPosition="inline"
       />
 
@@ -109,16 +114,18 @@ export default function LocationsIndex() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
-                      <TableHead>Namespace</TableHead>
-                      <TableHead>Phase</TableHead>
+                      <TableHead>City</TableHead>
+                      <TableHead>Class</TableHead>
+                      <TableHead>Ready</TableHead>
                       <TableHead>Age</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filtered.map((r) => {
-                      const phase = phaseBadgeProps(r.status?.phase ?? "");
+                      const ready = readyCondition(r);
+                      const badge = conditionBadgeProps(ready?.status ?? "");
                       return (
-                        <TableRow key={`${r.metadata.namespace}/${r.metadata.name}`}>
+                        <TableRow key={r.metadata.name}>
                           <TableCell>
                             <Link
                               to={`/locations/${encodeURIComponent(r.metadata.name)}`}
@@ -128,12 +135,15 @@ export default function LocationsIndex() {
                             </Link>
                           </TableCell>
                           <TableCell className="text-muted-foreground">
-                            {r.metadata.namespace ?? "—"}
+                            {r.spec.topology?.[CITY_CODE_KEY] ?? "—"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {r.spec.locationClassName ?? "—"}
                           </TableCell>
                           <TableCell>
-                            {r.status?.phase ? (
-                              <Badge type={phase.type} theme={phase.theme}>
-                                {r.status.phase}
+                            {ready ? (
+                              <Badge type={badge.type} theme={badge.theme}>
+                                {ready.status}
                               </Badge>
                             ) : (
                               "—"

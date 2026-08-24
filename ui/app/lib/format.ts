@@ -11,15 +11,18 @@ export function relativeAge(timestamp: string | undefined): string {
   return `${diffDays}d`;
 }
 
-export function phaseBadgeProps(phase: string): { type: string; theme: string } {
-  switch (phase) {
-    case "Ready":
+type BadgeType = "success" | "danger" | "muted";
+type BadgeTheme = "light";
+
+export function conditionBadgeProps(
+  status: string
+): { type: BadgeType; theme: BadgeTheme } {
+  switch (status) {
+    case "True":
       return { type: "success", theme: "light" };
-    case "Provisioning":
-      return { type: "info", theme: "light" };
-    case "Failed":
+    case "False":
       return { type: "danger", theme: "light" };
     default:
-      return { type: "default", theme: "light" };
+      return { type: "muted", theme: "light" };
   }
 }

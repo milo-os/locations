@@ -16,14 +16,33 @@ export interface KubeCondition {
   lastTransitionTime?: string;
 }
 
+export interface Coordinates {
+  latitude: string;
+  longitude: string;
+}
+
 export interface Location {
   metadata: KubeMeta;
   spec: {
-    description?: string;
+    locationClassName?: string;
+    topology: Record<string, string>;
+    provider?: {
+      gcp?: {
+        projectId?: string;
+        region?: string;
+        zone?: string;
+      };
+    };
+    coordinates?: Coordinates;
   };
   status?: {
-    phase?: string;
     conditions?: KubeCondition[];
-    observedGeneration?: number;
   };
+}
+
+export const CITY_CODE_KEY = "topology.datum.net/city-code";
+export const REGION_KEY = "topology.datum.net/region";
+
+export function readyCondition(location: Location): KubeCondition | undefined {
+  return location.status?.conditions?.find((c) => c.type === "Ready");
 }
