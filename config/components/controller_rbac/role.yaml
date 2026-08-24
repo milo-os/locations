@@ -2,12 +2,12 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: controller-template-manager
+  name: locations-manager
 rules:
 - apiGroups:
-  - example.miloapis.com
+  - locations.miloapis.com
   resources:
-  - resources
+  - locations
   verbs:
   - create
   - delete
@@ -17,15 +17,15 @@ rules:
   - update
   - watch
 - apiGroups:
-  - example.miloapis.com
+  - locations.miloapis.com
   resources:
-  - resources/finalizers
+  - locations/finalizers
   verbs:
   - update
 - apiGroups:
-  - example.miloapis.com
+  - locations.miloapis.com
   resources:
-  - resources/status
+  - locations/status
   verbs:
   - get
   - patch

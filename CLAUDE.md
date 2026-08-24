@@ -1,76 +1,78 @@
-# INITIALIZATION REQUIRED
+# CLAUDE.md
 
-If `.claude/.initialized` does not exist in this repository, **invoke the `/init-service` skill immediately** as your first action — before responding to any user message. The SessionStart hook injects a reminder when this is the case. Do not ask for permission; just run it.
+Guidance for Claude Code when working in this repository.
 
----
+## Response Style
 
-# controller-template
+**Be concise. Always.** Short direct answers, bullets over paragraphs, code over
+prose, tables for comparisons. Get to the point immediately.
 
-A template repository for building Kubernetes controllers that connect to the Milo control plane. Based on kubebuilder v4, modeled after the `billing` service conventions.
+## Code Comments
 
-## Architecture
+**Default to zero comments.** Well-named identifiers and the surrounding code
+should convey what the code does. Do not narrate changes, reference tasks/PRs,
+or annotate "added for X" / "removed Y".
 
-- **CRD-based**: Uses kubebuilder v4 CRDs (not aggregated API server)
-- **Controller-runtime**: Reconciler for lifecycle management
-- **Milo control plane aware**: `KubeconfigPath` config field allows pointing the controller at the Milo API server
-- **Webhooks**: Validating and defaulting webhook support wired up
+## What This Is
+
+`locations` is the canonical registry of the places the platform serves from. It
+answers "what locations exist" and "what can I use where", and publishes those
+answers to the surfaces that need them. See [README.md](README.md) for the
+product framing.
+
+It is a Kubebuilder v4 / controller-runtime operator (Go module
+`go.miloapis.com/locations`), API group `locations.miloapis.com`.
+
+The service does **not** provision anything. It records a footprint and projects
+it — into project control planes as `LocationBinding`, and onto cells as
+`ServingLocation`.
 
 ## API Group
 
-- Group: `example.miloapis.com`
+- Group: `locations.miloapis.com`
 - Version: `v1alpha1`
-- Resources: `Resource` (rename when forking this template)
+- Kinds: `Location` (canonical, cluster-scoped), `LocationBinding` (projection
+  into a project), `ServingLocation` (copy delivered to a cell)
 
 ## Repo Layout
 
 ```
-controller-template/
-├── cmd/controller-template/main.go  # Binary entrypoint
-├── api/v1alpha1/                     # CRD type definitions
+locations/
+├── cmd/locations/main.go   # Binary entrypoint
+├── api/v1alpha1/           # CRD type definitions
 ├── internal/
-│   ├── config/                       # Operator configuration
-│   └── controller/                   # Reconcilers
-├── config/                           # Kustomize manifests
-│   ├── base/                         # Core resources
-│   ├── components/                   # Optional components
-│   └── overlays/                     # Environment-specific
-├── ui/                               # Remix UI (React + datum-ui)
-│   ├── app/
-│   │   ├── components/AppLayout.tsx  # Sidebar + breadcrumb layout
-│   │   ├── lib/                      # k8s.server, kubeconfig.server, types, format
-│   │   ├── routes/                   # File-based Remix routes
-│   │   └── styles/index.css          # Tailwind + datum-ui theme
-│   ├── Dockerfile
-│   └── package.json
-├── hack/                             # Scripts and boilerplate
-└── test/e2e/                         # Chainsaw E2E tests
+│   ├── config/             # Operator configuration
+│   └── controller/         # Reconcilers
+├── config/                 # Kustomize manifests (base/components/overlays)
+├── ui/                     # Remix UI (React + datum-ui)
+├── hack/                   # Scripts and boilerplate
+└── test/e2e/               # Chainsaw E2E tests
 ```
 
-## Using This Template
+## Changing an API
 
-When forking this template for a new service:
+1. Edit `api/v1alpha1/*_types.go` and the kubebuilder markers.
+2. `task generate && task manifests` — regenerates deepcopy, CRDs, RBAC, webhooks.
+3. Extend the reconciler in `internal/controller/` and add a `_test.go`.
+4. `task test`.
 
-1. Replace `controller-template` → `your-service-name` throughout
-2. Replace `example.miloapis.com` → `your-group.miloapis.com`
-3. Replace `Resource` / `resource` → your CRD kind
-4. Replace `ControllerTemplateOperator` → `YourServiceOperator` in `internal/config/config.go`
-5. Update `go.mod` module path: `go.miloapis.com/your-service-name`
-6. Run `task generate && task manifests` to regenerate code and manifests
-7. Update `config/base/manager/config.yaml` and `config/overlays/dev/config.yaml`
+Never hand-edit generated files (`zz_generated.*`, `config/base/crd/bases/*`).
+RBAC comes from `+kubebuilder:rbac` markers — do not edit `role.yaml` by hand.
 
 ## Connecting to the Milo Control Plane
 
-The operator config supports a `kubeconfigPath` field that points at Milo's API server:
+The operator config takes a `kubeconfigPath` pointing at Milo's API server:
 
 ```yaml
 apiVersion: apiserver.config.miloapis.com/v1alpha1
-kind: ControllerTemplateOperator
+kind: LocationOperator
 metricsServer:
   bindAddress: "0"
 kubeconfigPath: /etc/milo/kubeconfig
 ```
 
-When `kubeconfigPath` is empty, the controller falls back to in-cluster config, which is the default for development against a local kind cluster.
+Empty `kubeconfigPath` falls back to in-cluster config — the default for local
+kind development.
 
 ## Verification Commands
 
@@ -90,3 +92,16 @@ task ui:dev                   # Start dev server at http://localhost:3000
 task ui:build                 # Production build
 task ui:type-check            # TypeScript check
 ```
+
+## Git Commit Message Format
+
+```
+<type>: <subject line max 50 chars>
+
+<Body wrapped at 80 chars explaining what and why>
+```
+
+Imperative mood, no period in the subject. Types: feat, fix, refactor, docs,
+test, chore, perf, style, ci. No watermarks or co-author tags. The 80-char wrap
+applies to commit messages only — PR descriptions and issues render as markdown
+and should not be hard-wrapped.

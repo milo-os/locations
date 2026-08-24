@@ -16,7 +16,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	examplev1alpha1 "go.miloapis.com/controller-template/api/v1alpha1"
+	locationsv1alpha1 "go.miloapis.com/locations/api/v1alpha1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -51,7 +51,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = examplev1alpha1.AddToScheme(scheme.Scheme)
+	err = locationsv1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
@@ -63,7 +63,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&ResourceReconciler{}).SetupWithManager(mgr)
+	err = (&LocationReconciler{}).SetupWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	go func() {

@@ -6,41 +6,41 @@ import { Card, CardContent, CardHeader, CardTitle } from "@datum-cloud/datum-ui/
 import { PageTitle } from "@datum-cloud/datum-ui/page-title";
 import { fetchK8s } from "~/lib/k8s.server";
 import { phaseBadgeProps, relativeAge } from "~/lib/format";
-import type { Resource } from "~/lib/types";
-import { resourcePath } from "~/lib/api";
+import type { Location } from "~/lib/types";
+import { locationPath } from "~/lib/api";
 
 interface LoaderData {
-  resource: Resource | null;
+  location: Location | null;
   error?: string;
 }
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const name = params.name ?? "";
   try {
-    // Resources are namespaced — list all and find by name for the template.
+    // Locations are namespaced — list all and find by name for the template.
     // In practice, scope this to a specific namespace via query param or config.
-    const resource = await fetchK8s<Resource>(
+    const location = await fetchK8s<Location>(
       request,
-      resourcePath(encodeURIComponent(name))
+      locationPath(encodeURIComponent(name))
     );
-    return json({ resource } satisfies LoaderData);
+    return json({ location } satisfies LoaderData);
   } catch (e) {
     return json({
-      resource: null,
+      location: null,
       error: e instanceof Error ? e.message : String(e),
     } satisfies LoaderData);
   }
 }
 
-export default function ResourceDetail() {
-  const { resource, error } = useLoaderData<typeof loader>() as LoaderData;
+export default function LocationDetail() {
+  const { location, error } = useLoaderData<typeof loader>() as LoaderData;
 
-  if (error || !resource) {
+  if (error || !location) {
     return (
       <div className="px-6 py-4">
         <Card>
           <CardContent className="py-6">
-            <p className="text-sm font-medium">Failed to load resource</p>
+            <p className="text-sm font-medium">Failed to load location</p>
             <p className="text-sm text-muted-foreground mt-1">{error}</p>
           </CardContent>
         </Card>
@@ -48,13 +48,13 @@ export default function ResourceDetail() {
     );
   }
 
-  const phase = resource.status?.phase;
+  const phase = location.status?.phase;
   const badge = phase ? phaseBadgeProps(phase) : null;
 
   return (
     <div className="flex flex-col gap-4 px-6 py-4">
       <div className="flex items-center gap-3">
-        <PageTitle title={resource.metadata.name} actionsPosition="inline" />
+        <PageTitle title={location.metadata.name} actionsPosition="inline" />
         {badge && phase && (
           <Badge type={badge.type} theme={badge.theme}>
             {phase}
@@ -71,30 +71,30 @@ export default function ResourceDetail() {
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Namespace</dt>
-                <dd>{resource.metadata.namespace ?? "—"}</dd>
+                <dd>{location.metadata.namespace ?? "—"}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Age</dt>
-                <dd>{relativeAge(resource.metadata.creationTimestamp)}</dd>
+                <dd>{relativeAge(location.metadata.creationTimestamp)}</dd>
               </div>
-              {resource.spec.description && (
+              {location.spec.description && (
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">Description</dt>
-                  <dd className="text-right max-w-[60%]">{resource.spec.description}</dd>
+                  <dd className="text-right max-w-[60%]">{location.spec.description}</dd>
                 </div>
               )}
             </dl>
           </CardContent>
         </Card>
 
-        {resource.status?.conditions && resource.status.conditions.length > 0 && (
+        {location.status?.conditions && location.status.conditions.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle>Conditions</CardTitle>
             </CardHeader>
             <CardContent>
               <dl className="space-y-2 text-sm">
-                {resource.status.conditions.map((c) => (
+                {location.status.conditions.map((c) => (
                   <div key={c.type} className="flex justify-between">
                     <dt className="text-muted-foreground">{c.type}</dt>
                     <dd className="flex items-center gap-2">

@@ -5,17 +5,17 @@
 domain: miloapis.com
 layout:
 - go.kubebuilder.io/v4
-projectName: controller-template
-repo: go.miloapis.com/controller-template
+projectName: locations
+repo: go.miloapis.com/locations
 resources:
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
   domain: miloapis.com
-  group: example
-  kind: Resource
-  path: go.miloapis.com/controller-template/api/v1alpha1
+  group: locations
+  kind: Location
+  path: go.miloapis.com/locations/api/v1alpha1
   version: v1alpha1
   webhooks:
     defaulting: true

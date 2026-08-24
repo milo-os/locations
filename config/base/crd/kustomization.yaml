@@ -2,8 +2,8 @@
 # since it depends on service name and namespace that are out of this kustomize package.
 # It should be run by an overlay under config/overlays/
 resources:
-- bases/example.miloapis.com_resources.yaml
-# +kubebuilder:scaffold:crdkustomizeresource
+- bases/locations.miloapis.com_locations.yaml
+# +kubebuilder:scaffold:crdkustomizelocation
 
 patches:
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.

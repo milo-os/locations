@@ -20,10 +20,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	examplev1alpha1 "go.miloapis.com/controller-template/api/v1alpha1"
-	"go.miloapis.com/controller-template/internal/config"
-	"go.miloapis.com/controller-template/internal/controller"
-	webhookv1alpha1 "go.miloapis.com/controller-template/internal/webhook/v1alpha1"
+	locationsv1alpha1 "go.miloapis.com/locations/api/v1alpha1"
+	"go.miloapis.com/locations/internal/config"
+	"go.miloapis.com/locations/internal/controller"
+	webhookv1alpha1 "go.miloapis.com/locations/internal/webhook/v1alpha1"
 )
 
 var (
@@ -35,7 +35,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(config.AddToScheme(scheme))
 	utilruntime.Must(config.RegisterDefaults(scheme))
-	utilruntime.Must(examplev1alpha1.AddToScheme(scheme))
+	utilruntime.Must(locationsv1alpha1.AddToScheme(scheme))
 }
 
 func newOperatorCommand(info BuildInfo) *cobra.Command {
@@ -52,19 +52,19 @@ func newOperatorCommand(info BuildInfo) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "operator",
-		Short: "Run the controller-template operator (controller-runtime manager)",
+		Short: "Run the locations operator (controller-runtime manager)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 			setupLog := ctrl.Log.WithName("setup")
-			setupLog.Info("starting controller-template operator",
+			setupLog.Info("starting locations operator",
 				"version", info.Version,
 				"gitCommit", info.GitCommit,
 				"gitTreeState", info.GitTreeState,
 				"buildDate", info.BuildDate,
 			)
 
-			var serverConfig config.ControllerTemplateOperator
+			var serverConfig config.LocationOperator
 			var configData []byte
 			if len(serverConfigFile) > 0 {
 				var err error
@@ -109,19 +109,19 @@ func newOperatorCommand(info BuildInfo) *cobra.Command {
 				WebhookServer:           webhookServer,
 				HealthProbeBindAddress:  probeAddr,
 				LeaderElection:          enableLeaderElection,
-				LeaderElectionID:        "controller-template.miloapis.com",
+				LeaderElectionID:        "locations.miloapis.com",
 				LeaderElectionNamespace: leaderElectionNamespace,
 			})
 			if err != nil {
 				return fmt.Errorf("starting manager: %w", err)
 			}
 
-			if err = (&controller.ResourceReconciler{}).SetupWithManager(mgr); err != nil {
-				return fmt.Errorf("creating Resource controller: %w", err)
+			if err = (&controller.LocationReconciler{}).SetupWithManager(mgr); err != nil {
+				return fmt.Errorf("creating Location controller: %w", err)
 			}
 
 			if err = webhookv1alpha1.SetupWebhookWithManager(mgr); err != nil {
-				return fmt.Errorf("creating Resource webhook: %w", err)
+				return fmt.Errorf("creating Location webhook: %w", err)
 			}
 
 			if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

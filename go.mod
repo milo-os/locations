@@ -1,4 +1,4 @@
-module go.miloapis.com/controller-template
+module go.miloapis.com/locations
 
 go 1.25.0
 

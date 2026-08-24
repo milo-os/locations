@@ -16,7 +16,7 @@ export interface KubeCondition {
   lastTransitionTime?: string;
 }
 
-export interface Resource {
+export interface Location {
   metadata: KubeMeta;
   spec: {
     description?: string;
