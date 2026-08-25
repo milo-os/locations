@@ -22,7 +22,6 @@ import (
 
 	locationsv1alpha1 "go.miloapis.com/locations/api/v1alpha1"
 	"go.miloapis.com/locations/internal/config"
-	"go.miloapis.com/locations/internal/controller"
 	webhookv1alpha1 "go.miloapis.com/locations/internal/webhook/v1alpha1"
 )
 
@@ -116,10 +115,6 @@ func newOperatorCommand(info BuildInfo) *cobra.Command {
 				return fmt.Errorf("starting manager: %w", err)
 			}
 
-			if err = (&controller.LocationReconciler{}).SetupWithManager(mgr); err != nil {
-				return fmt.Errorf("creating Location controller: %w", err)
-			}
-
 			if err = webhookv1alpha1.SetupWebhookWithManager(mgr); err != nil {
 				return fmt.Errorf("creating Location webhook: %w", err)
 			}
@@ -154,4 +149,3 @@ func newOperatorCommand(info BuildInfo) *cobra.Command {
 
 	return cmd
 }
-

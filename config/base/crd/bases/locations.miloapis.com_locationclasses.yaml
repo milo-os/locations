@@ -4,53 +4,45 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.4
-  name: locations.locations.miloapis.com
+  name: locationclasses.locations.miloapis.com
 spec:
   group: locations.miloapis.com
   names:
-    kind: Location
-    listKind: LocationList
-    plural: locations
-    singular: location
+    kind: LocationClass
+    listKind: LocationClassList
+    plural: locationclasses
+    singular: locationclass
   scope: Cluster
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.locationClassRef.name
-      name: Class
+    - jsonPath: .spec.controllerName
+      name: Controller
       type: string
-    - jsonPath: .spec.topology.topology\.datum\.net/city-code
-      name: City
+    - jsonPath: .status.conditions[?(@.type=="Accepted")].status
+      name: Accepted
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
-    - jsonPath: .status.conditions[?(@.type=='Ready')].status
-      name: Ready
-      type: string
-    - jsonPath: .status.conditions[?(@.type=='Ready')].reason
-      name: Reason
-      type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:
         description: |-
-          Location is a place the platform serves traffic or runs workloads from,
-          typically a city rather than a cloud vendor's region.
+          LocationClass is a kind of location that can be offered.
 
-          Every Location names a LocationClass, and where that class lives tells you
-          whose capacity is behind the location. A class in the provider's control
-          plane is the provider's own footprint, offered to you: the provider owns the
-          capacity and operates it. A class in your control plane is capacity you
-          brought, such as your own cloud account, and you operate it. Either way the
-          controller named on the class is the one that acts, so nothing about the
-          location has to restate who runs it.
+          A Location says where; its class says what backs it. The class names the
+          controller that brings locations of that kind up, and points at the
+          configuration for the capacity behind them. Two locations in the same city
+          with different classes are different products.
 
-          Locations the provider offers are declared once on the platform control
-          plane and projected into your project's control plane, and onto each cell as
-          a ServingLocation telling it where it sits. A projected Location is the
-          statement that the location is offered to you; edit the platform copy, not
-          the projection. Locations you declare yourself, on your own class, are yours
-          to edit.
+          A class lives in the control plane of whoever owns the capacity it
+          describes. Classes for the provider's own footprint live in the provider's
+          control plane: you name them from a Location, read the Accepted condition to
+          know they are usable, and do not create or edit them. If you are bringing
+          your own capacity, such as your own cloud account, you declare the class in
+          your control plane and it is yours to manage. Which control plane holds a
+          class is therefore the answer to whose capacity it is, and
+          spec.controllerName is the answer to who operates it.
         properties:
           apiVersion:
             description: |-
@@ -70,82 +62,80 @@ spec:
           metadata:
             type: object
           spec:
-            description: LocationSpec defines the desired state of Location.
+            description: LocationClassSpec describes a kind of location the platform
+              can offer.
             properties:
-              coordinates:
+              controllerName:
                 description: |-
-                  The geographic coordinates of the location, used by consumers that need
-                  to plot the location on a map.
-                properties:
-                  latitude:
-                    description: Latitude in decimal degrees, in the range [-90, 90].
-                    pattern: ^-?\d{1,2}(\.\d+)?$
-                    type: string
-                    x-kubernetes-validations:
-                    - message: latitude must be between -90 and 90
-                      rule: double(self) >= -90.0 && double(self) <= 90.0
-                  longitude:
-                    description: Longitude in decimal degrees, in the range [-180,
-                      180].
-                    pattern: ^-?\d{1,3}(\.\d+)?$
-                    type: string
-                    x-kubernetes-validations:
-                    - message: longitude must be between -180 and 180
-                      rule: double(self) >= -180.0 && double(self) <= 180.0
-                required:
-                - latitude
-                - longitude
-                type: object
-              locationClassRef:
+                  ControllerName is the controller that reconciles Locations of this class.
+                  It reads as a domain-qualified path, for example
+                  `locations.miloapis.com/shared-edge`.
+
+                  Only the controller named here acts on a Location of this class. Every
+                  other controller ignores it, so two providers can serve locations side by
+                  side in the same control plane without contending for the same objects.
+
+                  You cannot change this field after creation. Retarget a class by creating
+                  a new one and moving Locations across.
+                maxLength: 253
+                minLength: 1
+                type: string
+                x-kubernetes-validations:
+                - message: controllerName is immutable
+                  rule: self == oldSelf
+              parametersRef:
                 description: |-
-                  LocationClassRef names the LocationClass backing this location. The class
-                  decides which controller brings the location up and what capacity sits
-                  behind it.
+                  ParametersRef points at a resource holding the provider's own
+                  configuration for this class: which capacity backs it, and whatever else
+                  that provider needs to stand a location up. The shape of that resource is
+                  the provider's to define, and this API makes no claim about it.
 
-                  Leave the project qualifier empty to name a class in the same control
-                  plane as this Location. Set it to name a class in the provider's control
-                  plane, which is what you do to place a location on capacity the provider
-                  operates.
+                  The resource is owned by the provider, not by you. Read it to understand
+                  what a class offers; expect writes to be rejected.
 
-                  The class must exist and report Accepted=True before the location becomes
-                  Ready. Naming a class that does not exist leaves the location not Ready
-                  rather than rejecting it, so a location can be declared ahead of the
-                  class that will serve it.
+                  Leave it unset for a class that needs no configuration. If it is set and
+                  the resource cannot be read, or does not carry what the controller needs,
+                  the class reports Accepted=False with reason InvalidParameters and no
+                  Location of this class comes up.
                 properties:
+                  group:
+                    description: |-
+                      Group is the API group of the referent, for example
+                      `compute.miloapis.com`. Use the empty string for the core API group.
+                    maxLength: 253
+                    type: string
+                  kind:
+                    description: Kind is the kind of the referent, for example `EdgeCapacityPool`.
+                    maxLength: 63
+                    minLength: 1
+                    type: string
                   name:
-                    description: Name is the name of the LocationClass.
+                    description: Name is the name of the referent.
                     maxLength: 253
                     minLength: 1
                     type: string
-                  project:
-                    description: |-
-                      Project names the project whose control plane holds the class. Leave it
-                      unset, or empty, for a class that lives alongside this Location.
-
-                      Set it when you are consuming capacity somebody else operates: the class
-                      stays in their control plane, where they own it, and your Location points
-                      across at it. You do not get a copy of the class, and you cannot change
-                      what it offers.
-                    maxLength: 253
-                    type: string
                 required:
+                - group
+                - kind
                 - name
                 type: object
-              topology:
-                additionalProperties:
-                  type: string
-                description: "The topology of the location\n\nThis may contain arbitrary
-                  topology keys. Some keys may be well known, such\nas:\n\t- topology.datum.net/city-code"
-                type: object
             required:
-            - locationClassRef
-            - topology
+            - controllerName
             type: object
           status:
-            description: LocationStatus defines the observed state of Location.
+            description: |-
+              LocationClassStatus reports what the controller behind a class has made of
+              it.
             properties:
               conditions:
-                description: Represents the observations of a location's current state.
+                description: |-
+                  Conditions describe the current state of the class.
+
+                  `Accepted` tells you whether the controller named in spec.controllerName
+                  has taken the class on. Until it is True, Locations of this class do
+                  nothing. A class no controller recognises stays Accepted=Unknown with
+                  reason Pending, which is what you see when the class names a controller
+                  that is not running.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -201,6 +191,9 @@ spec:
                   - type
                   type: object
                 type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
             type: object
         type: object
     served: true

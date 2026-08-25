@@ -1,2 +1,3 @@
 resources:
+- locations_v1alpha1_locationclass.yaml
 - locations_v1alpha1_location.yaml

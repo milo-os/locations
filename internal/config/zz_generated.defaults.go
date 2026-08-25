@@ -13,5 +13,16 @@ import (
 // Public to allow building arbitrary schemes.
 // All generated defaulters are covering - they call all nested defaulters.
 func RegisterDefaults(scheme *runtime.Scheme) error {
+	scheme.AddTypeDefaultingFunc(&LocationOperator{}, func(obj interface{}) { SetObjectDefaults_LocationOperator(obj.(*LocationOperator)) })
 	return nil
+}
+
+func SetObjectDefaults_LocationOperator(in *LocationOperator) {
+	SetDefaults_LocationOperator(in)
+	SetDefaults_MetricsServerConfig(&in.MetricsServer)
+	SetDefaults_TLSConfig(&in.MetricsServer.TLS)
+	if in.WebhookServer != nil {
+		SetDefaults_WebhookServerConfig(in.WebhookServer)
+		SetDefaults_TLSConfig(&in.WebhookServer.TLS)
+	}
 }
