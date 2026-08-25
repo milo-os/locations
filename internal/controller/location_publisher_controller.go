@@ -570,9 +570,9 @@ func (r *LocationPublisherReconciler) refreshFleetMetrics(ctx context.Context) {
 		live++
 	}
 
-	locationSourceTotal.Set(float64(publishable))
-	locationPublishedTotal.Set(float64(live))
-	locationRetainedTotal.Set(float64(retained))
+	locationsPublishable.Set(float64(publishable))
+	locationsPublished.Set(float64(live))
+	locationsRetained.Set(float64(retained))
 }
 
 func (r *LocationPublisherReconciler) event(obj client.Object, eventType, reason, message string) {
