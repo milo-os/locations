@@ -9,7 +9,6 @@ vars:
   CONTROLLER_TOOLS_VERSION: "v0.16.4"
   DEFAULTER_GEN_VERSION: "v0.32.3"
   GOLANGCI_LINT_VERSION: "v2.12.2"
-  CHAINSAW_VERSION: "v0.2.15"
 
 includes:
   # Must set TASK_X_REMOTE_TASKFILES=1 to use this feature.
@@ -129,20 +128,11 @@ tasks:
           mv {{.TOOL_DIR}}/golangci-lint {{.TOOL_DIR}}/golangci-lint-{{.GOLANGCI_LINT_VERSION}}
         fi
         ln -sf {{.TOOL_DIR}}/golangci-lint-{{.GOLANGCI_LINT_VERSION}} {{.TOOL_DIR}}/golangci-lint
-
-        # chainsaw
-        if [ ! -f "{{.TOOL_DIR}}/chainsaw-{{.CHAINSAW_VERSION}}" ]; then
-          echo "Installing chainsaw {{.CHAINSAW_VERSION}}..."
-          GOBIN={{.TOOL_DIR}} go install github.com/kyverno/chainsaw@{{.CHAINSAW_VERSION}}
-          mv {{.TOOL_DIR}}/chainsaw {{.TOOL_DIR}}/chainsaw-{{.CHAINSAW_VERSION}}
-        fi
-        ln -sf {{.TOOL_DIR}}/chainsaw-{{.CHAINSAW_VERSION}} {{.TOOL_DIR}}/chainsaw
     silent: true
     status:
       - test -f {{.TOOL_DIR}}/controller-gen-{{.CONTROLLER_TOOLS_VERSION}}
       - test -f {{.TOOL_DIR}}/defaulter-gen-{{.DEFAULTER_GEN_VERSION}}
       - test -f {{.TOOL_DIR}}/golangci-lint-{{.GOLANGCI_LINT_VERSION}}
-      - test -f {{.TOOL_DIR}}/chainsaw-{{.CHAINSAW_VERSION}}
 
   # Development tasks
   dev:build:
@@ -329,16 +319,3 @@ tasks:
         docker build -t "ghcr.io/milo-os/locations-ui:dev" ui/
         echo "Built ghcr.io/milo-os/locations-ui:dev"
     silent: true
-
-  # E2E Testing
-  e2e:
-    desc: Run chainsaw e2e tests
-    deps:
-      - task: install-go-tool
-        vars:
-          NAME: chainsaw
-          PACKAGE: github.com/kyverno/chainsaw
-          VERSION: "{{.CHAINSAW_VERSION}}"
-    cmds:
-      - "{{.TOOL_DIR}}/chainsaw test {{if .CLI_ARGS}}{{.CLI_ARGS}}{{else}}test/e2e/{{end}}"
-    silent: false

@@ -47,8 +47,7 @@ locations/
 ├── config/                 # Kustomize manifests (base/components/overlays)
 ├── ui/                     # Remix UI (React + datum-ui)
 ├── hack/                   # Scripts and boilerplate
-├── test/crd/               # Generated CRDs against envtest
-└── test/e2e/               # Chainsaw E2E tests
+└── test/crd/               # Generated CRDs against envtest
 ```
 
 ## Changing an API
