@@ -20,3 +20,10 @@ metricsServer:
 #     - apiVersion: networking.datumapis.com/v1alpha
 #       kind: Subnet
 #       locationLabel: networking.datumapis.com/location
+
+# Readiness reporting writes status.conditions[Ready] on the Locations backed by
+# a class naming this controller, and status.conditions[Accepted] on those
+# classes. It stays off until controllerName is set.
+#
+# locationReadiness:
+#   controllerName: locations.miloapis.com/shared-edge

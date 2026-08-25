@@ -38,6 +38,15 @@ rules:
 - apiGroups:
   - locations.miloapis.com
   resources:
+  - locationclasses/status
+  - locations/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - locations.miloapis.com
+  resources:
   - locations
   verbs:
   - get

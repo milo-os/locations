@@ -91,6 +91,23 @@ type LocationStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
+const (
+	// LocationConditionReady reports whether the controller named by the
+	// location's class has the location serving.
+	LocationConditionReady = "Ready"
+
+	// LocationReasonReady is set when the location is usable.
+	LocationReasonReady = "Ready"
+
+	// LocationReasonLocationClassNotFound is set when spec.locationClassRef
+	// names a class that does not exist in this control plane.
+	LocationReasonLocationClassNotFound = "LocationClassNotFound"
+
+	// LocationReasonMissingTopology is set when the location does not carry the
+	// topology the platform needs to place it, such as its city code.
+	LocationReasonMissingTopology = "MissingTopology"
+)
+
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:subresource:status
