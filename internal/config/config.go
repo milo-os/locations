@@ -5,9 +5,11 @@ package config
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,6 +43,18 @@ type LocationOperator struct {
 	// controller falls back to in-cluster config / $KUBECONFIG via
 	// ctrl.GetConfig(), which is useful for local development.
 	KubeconfigPath string `json:"kubeconfigPath,omitempty"`
+
+	// LocationPublisher configures the controller that publishes Locations to
+	// the federation hub as ServingLocations.
+	LocationPublisher LocationPublisherConfig `json:"locationPublisher,omitempty"`
+}
+
+// Validate reports whether the operator configuration can serve.
+func (c *LocationOperator) Validate() error {
+	if err := c.LocationPublisher.Validate(); err != nil {
+		return fmt.Errorf("locationPublisher: %w", err)
+	}
+	return nil
 }
 
 // RestConfig returns the *rest.Config used to connect to the Milo control plane.
@@ -213,4 +227,157 @@ func SetDefaults_LocationOperator(obj *LocationOperator) {
 
 func init() {
 	SchemeBuilder.Register(&LocationOperator{})
+}
+
+// +k8s:deepcopy-gen=true
+
+// LocationPublisherConfig configures the controller that copies Locations to
+// the federation hub as ServingLocations, so that each cell is told which
+// location it serves.
+//
+// Set hubKubeconfigPath to turn it on, and set it on exactly one deployment:
+// two publishers writing the same hub fight over the same objects.
+type LocationPublisherConfig struct {
+	// SourceKubeconfigPath is the path to a kubeconfig for the control plane
+	// holding the Locations to publish. Defaults to the operator's own
+	// kubeconfigPath.
+	SourceKubeconfigPath string `json:"sourceKubeconfigPath,omitempty"`
+
+	// HubKubeconfigPath is the path to a kubeconfig for the federation hub the
+	// copies are written to. Publishing stays off while this is empty.
+	HubKubeconfigPath string `json:"hubKubeconfigPath,omitempty"`
+
+	// SafetyResyncPeriod is how often the publisher re-reads both ends and
+	// repairs any difference it finds. Publishing itself is driven by watches,
+	// so this only bounds how long an edit made directly on the hub survives.
+	// Shorten it to repair such edits sooner, at the cost of more API traffic.
+	//
+	// Defaults to 30 minutes.
+	SafetyResyncPeriod metav1.Duration `json:"safetyResyncPeriod,omitempty"`
+
+	// LocationScopedResources are the resource kinds carried to the cells
+	// serving a location alongside the ServingLocation itself.
+	//
+	// A resource belongs to one location, so it is selected by the location it
+	// names rather than fleet-wide: a cell serving nowhere would otherwise be
+	// given every location's objects. Leave this empty and only the
+	// ServingLocation is carried.
+	LocationScopedResources []LocationScopedResource `json:"locationScopedResources,omitempty"`
+
+	// Client configures the Kubernetes client connections to both the source
+	// and the hub.
+	Client ClientConnectionConfig `json:"client,omitempty"`
+}
+
+// +k8s:deepcopy-gen=true
+
+// LocationScopedResource is a resource kind that belongs to a single location
+// and is carried to the cells serving it.
+type LocationScopedResource struct {
+	// APIVersion of the resource, such as "networking.datumapis.com/v1alpha".
+	APIVersion string `json:"apiVersion"`
+
+	// Kind of the resource, such as "Subnet".
+	Kind string `json:"kind"`
+
+	// LocationLabel is the label on those objects naming the location they
+	// belong to.
+	LocationLabel string `json:"locationLabel"`
+}
+
+func SetDefaults_LocationPublisherConfig(obj *LocationPublisherConfig) {
+	if obj.SafetyResyncPeriod.Duration == 0 {
+		obj.SafetyResyncPeriod = metav1.Duration{Duration: 30 * time.Minute}
+	}
+}
+
+func (c *LocationPublisherConfig) Enabled() bool {
+	return c.HubKubeconfigPath != ""
+}
+
+func (c *LocationPublisherConfig) Validate() error {
+	if !c.Enabled() {
+		return nil
+	}
+	var errs []error
+	if c.SafetyResyncPeriod.Duration < 0 {
+		errs = append(errs, errors.New("safetyResyncPeriod must not be negative"))
+	}
+	for i, resource := range c.LocationScopedResources {
+		if resource.APIVersion == "" || resource.Kind == "" || resource.LocationLabel == "" {
+			errs = append(errs, fmt.Errorf(
+				"locationScopedResources[%d]: apiVersion, kind and locationLabel are all required", i))
+		}
+	}
+	return errors.Join(errs...)
+}
+
+// SourceRestConfig resolves the connection to the control plane the Location
+// records are read from.
+func (c *LocationPublisherConfig) SourceRestConfig(fallbackKubeconfigPath string) (*rest.Config, error) {
+	path := c.SourceKubeconfigPath
+	if path == "" {
+		path = fallbackKubeconfigPath
+	}
+	return c.restConfig(path)
+}
+
+// HubRestConfig resolves the connection to the federation hub the published
+// copies are written to.
+func (c *LocationPublisherConfig) HubRestConfig() (*rest.Config, error) {
+	return c.restConfig(c.HubKubeconfigPath)
+}
+
+func (c *LocationPublisherConfig) restConfig(path string) (*rest.Config, error) {
+	var (
+		cfg *rest.Config
+		err error
+	)
+	if path == "" {
+		cfg, err = ctrl.GetConfig()
+	} else {
+		cfg, err = clientcmd.BuildConfigFromFlags("", path)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	c.Client.ApplyTo(cfg)
+	return cfg, nil
+}
+
+// +k8s:deepcopy-gen=true
+
+// ClientConnectionConfig tunes client-side throttling on a connection.
+type ClientConnectionConfig struct {
+	// QPS is the maximum sustained queries per second before client-side
+	// throttling kicks in.
+	//
+	// +default=50
+	QPS float32 `json:"qps,omitempty"`
+
+	// Burst is the maximum burst size for throttle. Requests above QPS but
+	// below Burst are allowed immediately.
+	//
+	// +default=100
+	Burst int `json:"burst,omitempty"`
+}
+
+// ApplyTo applies the client connection settings to a rest.Config.
+func (c *ClientConnectionConfig) ApplyTo(cfg *rest.Config) {
+	if c.QPS > 0 {
+		cfg.QPS = c.QPS
+	}
+	if c.Burst > 0 {
+		cfg.Burst = c.Burst
+	}
+}
+
+func SetDefaults_ClientConnectionConfig(obj *ClientConnectionConfig) {
+	if obj.QPS == 0 {
+		obj.QPS = 50
+	}
+	if obj.Burst == 0 {
+		obj.Burst = 100
+	}
 }

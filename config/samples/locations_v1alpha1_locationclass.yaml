@@ -1,0 +1,10 @@
+apiVersion: locations.miloapis.com/v1alpha1
+kind: LocationClass
+metadata:
+  name: shared-edge
+spec:
+  controllerName: locations.miloapis.com/shared-edge
+  parametersRef:
+    group: compute.miloapis.com
+    kind: EdgeCapacityPool
+    name: shared-edge-pool
