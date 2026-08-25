@@ -203,6 +203,10 @@ spec:
                 type: array
             type: object
         type: object
+        x-kubernetes-validations:
+        - message: name must be at most 63 characters, because it is published as
+            a label value
+          rule: size(self.metadata.name) <= 63
     served: true
     storage: true
     subresources:

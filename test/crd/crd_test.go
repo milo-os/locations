@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -216,4 +217,31 @@ func TestLocationClassRefCarriesProject(t *testing.T) {
 	if got.Spec.LocationClassRef.Project != "provider-project" {
 		t.Fatalf("project did not round-trip: got %q", got.Spec.LocationClassRef.Project)
 	}
+}
+
+func TestLocationNameIsBoundedByTheLabelValueLimit(t *testing.T) {
+	cl := requireEnv(t)
+	ctx := context.Background()
+
+	tooLong := &locationsv1alpha1.Location{
+		ObjectMeta: metav1.ObjectMeta{Name: strings.Repeat("a", 64)},
+		Spec:       locationSpec(),
+	}
+	err := cl.Create(ctx, tooLong)
+	if err == nil {
+		t.Cleanup(func() { _ = cl.Delete(ctx, tooLong) })
+		t.Fatal("a name too long to publish as a label value must be rejected")
+	}
+	if !apierrors.IsInvalid(err) {
+		t.Fatalf("expected an Invalid error, got %v", err)
+	}
+
+	atLimit := &locationsv1alpha1.Location{
+		ObjectMeta: metav1.ObjectMeta{Name: strings.Repeat("a", 63)},
+		Spec:       locationSpec(),
+	}
+	if err := cl.Create(ctx, atLimit); err != nil {
+		t.Fatalf("a name at the limit must be accepted: %v", err)
+	}
+	t.Cleanup(func() { _ = cl.Delete(ctx, atLimit) })
 }
