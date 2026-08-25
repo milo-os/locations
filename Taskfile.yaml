@@ -9,6 +9,7 @@ vars:
   CONTROLLER_TOOLS_VERSION: "v0.16.4"
   DEFAULTER_GEN_VERSION: "v0.32.3"
   GOLANGCI_LINT_VERSION: "v2.12.2"
+  CRDOC_VERSION: "v0.6.4"
 
 includes:
   # Must set TASK_X_REMOTE_TASKFILES=1 to use this feature.
@@ -54,6 +55,23 @@ tasks:
         echo "Manifests generated!"
     deps:
       - install-tools
+    silent: true
+
+  api-docs:
+    desc: Generate the API reference (docs/api/locations.md) from the CRDs
+    deps:
+      - task: install-go-tool
+        vars:
+          NAME: crdoc
+          PACKAGE: fybrik.io/crdoc
+          VERSION: "{{.CRDOC_VERSION}}"
+    cmds:
+      - |
+        set -e
+        echo "Generating API docs..."
+        mkdir -p docs/api
+        {{.TOOL_DIR}}/crdoc --resources config/base/crd/bases --output docs/api/locations.md
+        echo "API docs generated!"
     silent: true
 
   build:
