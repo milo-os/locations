@@ -22,6 +22,22 @@ rules:
 - apiGroups:
   - locations.miloapis.com
   resources:
+  - locationclasses
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - locations.miloapis.com
+  resources:
+  - locationclasses/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - locations.miloapis.com
+  resources:
   - locations
   verbs:
   - get

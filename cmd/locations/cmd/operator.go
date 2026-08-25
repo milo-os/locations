@@ -111,6 +111,10 @@ func newOperatorCommand(info BuildInfo) *cobra.Command {
 				return fmt.Errorf("starting manager: %w", err)
 			}
 
+			if err := (&controller.LocationClassReconciler{}).SetupWithManager(ctx, mgr); err != nil {
+				return fmt.Errorf("creating location class controller: %w", err)
+			}
+
 			if serverConfig.LocationPublisher.Enabled() {
 				if err := setupLocationPublisher(serverConfig, mgr); err != nil {
 					return fmt.Errorf("creating location publisher: %w", err)
