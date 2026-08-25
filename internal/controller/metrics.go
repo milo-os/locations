@@ -13,6 +13,7 @@ import (
 
 const (
 	metricLabelLocation = "location"
+	metricLabelClass    = "class"
 	metricLabelReason   = "reason"
 )
 
@@ -73,6 +74,14 @@ var (
 			Help: "1 while a source Location cannot be published, by reason. A refusal is reported, never silently skipped.",
 		},
 		[]string{metricLabelLocation, metricLabelReason},
+	)
+
+	locationClassDeletionBlocked = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "locations_class_deletion_blocked",
+			Help: "1 while a deleted LocationClass is held by its finalizer because Locations still name it, by reason.",
+		},
+		[]string{metricLabelClass, metricLabelReason},
 	)
 
 	locationPublisherConflictsTotal = promauto.NewCounterVec(

@@ -45,7 +45,7 @@ const (
 	// lets the publisher delete that copy without checking the removal guard.
 	LocationRemovalOverrideAnnotation = "networking.datumapis.com/removal-override"
 
-	// LocationRemovalBlockedAnnotation records why a copy is being retained.
+	// LocationRemovalBlockedAnnotation records why an object is being retained.
 	LocationRemovalBlockedAnnotation = "networking.datumapis.com/removal-blocked"
 
 	removalBlockedRequeue = 5 * time.Minute
