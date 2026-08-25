@@ -124,6 +124,7 @@ task test        # Run tests
 task lint        # Run the linter
 task generate    # Run code generation
 task manifests   # Generate CRD, RBAC, and webhook manifests
+task api-docs    # Generate the API reference under docs/api/
 task dev:setup   # Bring up a kind cluster, build, load, and deploy
 ```
 

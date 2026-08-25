@@ -45,18 +45,19 @@ locations/
 │   ├── config/             # Operator configuration
 │   └── controller/         # Reconcilers
 ├── config/                 # Kustomize manifests (base/components/overlays)
+├── docs/api/               # Generated API reference (crdoc)
 ├── ui/                     # Remix UI (React + datum-ui)
 ├── hack/                   # Scripts and boilerplate
-├── test/crd/               # Generated CRDs against envtest
-└── test/e2e/               # Chainsaw E2E tests
+└── test/crd/               # Generated CRDs against envtest
 ```
 
 ## Changing an API
 
 1. Edit `api/v1alpha1/*_types.go` and the kubebuilder markers.
 2. `task generate && task manifests` — regenerates deepcopy, CRDs, RBAC, webhooks.
-3. Extend the reconciler in `internal/controller/` and add a `_test.go`.
-4. `task test`.
+3. `task api-docs` — regenerates `docs/api/locations.md`.
+4. Extend the reconciler in `internal/controller/` and add a `_test.go`.
+5. `task test`.
 
 Never hand-edit generated files (`zz_generated.*`, `config/base/crd/bases/*`).
 RBAC comes from `+kubebuilder:rbac` markers — do not edit `role.yaml` by hand.
@@ -85,6 +86,7 @@ task test                     # Run tests
 task lint                     # Run linter
 task generate                 # Run code generation
 task manifests                # Generate CRD/RBAC/webhook manifests
+task api-docs                 # Generate the API reference under docs/api/
 task dev:setup                # Bootstrap kind cluster + deploy
 task dev:redeploy             # Rebuild and redeploy
 
