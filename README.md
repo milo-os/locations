@@ -23,10 +23,10 @@ carries:
 - **Topology** — where in the world it is (`city-code`, `region`, and any other
   keys you need). Workloads placed at a location inherit these, and placement
   requests that name a city are answered from them.
-- **Class** — how the control plane behaves for things at that location
-  (`datum-managed`, `self-managed`).
-- **Provider** — who supplies the underlying capacity, and the provider's own
-  coordinates for it.
+- **Class** — which `LocationClass` backs it, naming the controller that brings
+  the location up and pointing at the capacity behind it.
+- **Managed by** — who operates the control plane for the location: the platform
+  (`Platform`), or whoever registered it (`Self`).
 - **Coordinates** — latitude and longitude, for anything that needs to plot the
   location on a map.
 
@@ -38,11 +38,12 @@ downstream is a projection of that declaration, never an independent copy.
 | Resource | Who reads it | What it is |
 |---|---|---|
 | `Location` | Platform operators | The canonical record. The only object anyone edits. |
-| `LocationBinding` | Consumers, in their own control plane | A location that has been made available to a project — present only once the location is ready and the service is actually offered there. |
+| `LocationClass` | Platform operators, capacity providers | A kind of location: the controller that serves it and the provider configuration behind it. |
+| `Location` | Consumers, in their own control plane | The same kind, projected into a project — present only once the location is ready and the service is actually offered there. |
 | `ServingLocation` | A cell, in its own cluster | A read-only copy delivered to a cluster telling it which location it serves. |
 
 The distinction that matters: **a `Location` existing does not mean a consumer
-can use it.** A `LocationBinding` appearing in a project's control plane is the
+can use it.** A `Location` appearing in a project's control plane is the
 statement that they can. That gap is deliberate — it's where availability,
 readiness, and rollout live.
 
@@ -77,15 +78,11 @@ kind: Location
 metadata:
   name: us-east-1
 spec:
-  locationClassName: datum-managed
+  locationClassName: shared-edge
+  managedBy: Platform
   topology:
     topology.datum.net/city-code: IAD
     topology.datum.net/region: us-east-1
-  provider:
-    gcp:
-      projectId: example-project
-      region: us-east4
-      zone: us-east4-a
   coordinates:
     latitude: "38.9445"
     longitude: "-77.4558"
@@ -96,7 +93,7 @@ Consumers list what is available to them, in their own control plane:
 
 ```bash
 datumctl auth update-kubeconfig --project your-project
-datumctl get locationbindings
+datumctl get locations
 ```
 
 ## Development

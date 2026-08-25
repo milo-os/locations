@@ -18,6 +18,9 @@ spec:
     - jsonPath: .spec.locationClassName
       name: Class
       type: string
+    - jsonPath: .spec.managedBy
+      name: Managed By
+      type: string
     - jsonPath: .spec.topology.topology\.datum\.net/city-code
       name: City
       type: string
@@ -33,7 +36,15 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Location is the Schema for the locations API.
+        description: |-
+          Location is a place the platform serves traffic or runs workloads from,
+          typically a city rather than a cloud vendor's region.
+
+          Operators declare Locations once, on the platform control plane. The same
+          kind then appears in your project's control plane for every location you can
+          actually use, and on each cell as a ServingLocation telling it where it sits.
+          A Location in your control plane is the statement that the location is
+          offered to you; edit the platform copy, not the projections.
         properties:
           apiVersion:
             description: |-
@@ -80,35 +91,27 @@ spec:
                 - longitude
                 type: object
               locationClassName:
-                description: "The location class that indicates control plane behavior
-                  of entities\nassociated with the location.\n\nValid values are:\n\t-
-                  datum-managed\n\t- self-managed"
-                type: string
-              provider:
-                description: The location provider
-                properties:
-                  gcp:
-                    properties:
-                      projectId:
-                        description: |-
-                          The GCP project servicing the location
+                description: |-
+                  LocationClassName is the name of the LocationClass backing this location.
+                  The class decides which controller brings the location up and what
+                  capacity sits behind it.
 
-                          For locations with the class of `datum-managed`, a service account will be
-                          required for each unique GCP project ID across all locations registered in a
-                          namespace.
-                        type: string
-                      region:
-                        description: The GCP region servicing the location
-                        type: string
-                      zone:
-                        description: The GCP zone servicing the location
-                        type: string
-                    required:
-                    - projectId
-                    - region
-                    - zone
-                    type: object
-                type: object
+                  The class must exist and report Accepted=True before the location becomes
+                  Ready. Naming a class that does not exist leaves the location not Ready
+                  rather than rejecting it, so a location can be declared ahead of the
+                  class that will serve it.
+                maxLength: 253
+                minLength: 1
+                type: string
+              managedBy:
+                description: |-
+                  ManagedBy says who is responsible for operating the control plane for
+                  this location. It is independent of the class: the class decides what
+                  capacity backs the location, this decides who runs it.
+                enum:
+                - Platform
+                - Self
+                type: string
               topology:
                 additionalProperties:
                   type: string
@@ -117,7 +120,7 @@ spec:
                 type: object
             required:
             - locationClassName
-            - provider
+            - managedBy
             - topology
             type: object
           status:

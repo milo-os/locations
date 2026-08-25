@@ -3,15 +3,11 @@ kind: Location
 metadata:
   name: us-east-1
 spec:
-  locationClassName: datum-managed
+  locationClassName: shared-edge
+  managedBy: Platform
   topology:
     topology.datum.net/city-code: IAD
     topology.datum.net/region: us-east-1
-  provider:
-    gcp:
-      projectId: example-project
-      region: us-east4
-      zone: us-east4-a
   coordinates:
     latitude: "38.9445"
     longitude: "-77.4558"

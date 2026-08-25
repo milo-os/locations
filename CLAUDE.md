@@ -24,15 +24,16 @@ It is a Kubebuilder v4 / controller-runtime operator (Go module
 `go.miloapis.com/locations`), API group `locations.miloapis.com`.
 
 The service does **not** provision anything. It records a footprint and projects
-it — into project control planes as `LocationBinding`, and onto cells as
+it — into project control planes as `Location`, and onto cells as
 `ServingLocation`.
 
 ## API Group
 
 - Group: `locations.miloapis.com`
 - Version: `v1alpha1`
-- Kinds: `Location` (canonical, cluster-scoped), `LocationBinding` (projection
-  into a project), `ServingLocation` (copy delivered to a cell)
+- Kinds: `Location` (canonical, cluster-scoped, also the projection into a
+  project), `LocationClass` (what backs a location), `ServingLocation` (copy
+  delivered to a cell)
 
 ## Repo Layout
 
@@ -46,6 +47,7 @@ locations/
 ├── config/                 # Kustomize manifests (base/components/overlays)
 ├── ui/                     # Remix UI (React + datum-ui)
 ├── hack/                   # Scripts and boilerplate
+├── test/crd/               # Generated CRDs against envtest
 └── test/e2e/               # Chainsaw E2E tests
 ```
 

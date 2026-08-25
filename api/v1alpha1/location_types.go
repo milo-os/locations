@@ -8,15 +8,26 @@ import (
 
 // LocationSpec defines the desired state of Location.
 type LocationSpec struct {
-	// The location class that indicates control plane behavior of entities
-	// associated with the location.
+	// LocationClassName is the name of the LocationClass backing this location.
+	// The class decides which controller brings the location up and what
+	// capacity sits behind it.
 	//
-	// Valid values are:
-	//	- datum-managed
-	//	- self-managed
+	// The class must exist and report Accepted=True before the location becomes
+	// Ready. Naming a class that does not exist leaves the location not Ready
+	// rather than rejecting it, so a location can be declared ahead of the
+	// class that will serve it.
 	//
 	// +kubebuilder:validation:Required
-	LocationClassName string `json:"locationClassName,omitempty"`
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	LocationClassName string `json:"locationClassName"`
+
+	// ManagedBy says who is responsible for operating the control plane for
+	// this location. It is independent of the class: the class decides what
+	// capacity backs the location, this decides who runs it.
+	//
+	// +kubebuilder:validation:Required
+	ManagedBy LocationManagementResponsibility `json:"managedBy"`
 
 	// The topology of the location
 	//
@@ -27,17 +38,29 @@ type LocationSpec struct {
 	// +kubebuilder:validation:Required
 	Topology map[string]string `json:"topology"`
 
-	// The location provider
-	//
-	// +kubebuilder:validation:Required
-	Provider LocationProvider `json:"provider"`
-
 	// The geographic coordinates of the location, used by consumers that need
 	// to plot the location on a map.
 	//
 	// +kubebuilder:validation:Optional
 	Coordinates *Coordinates `json:"coordinates,omitempty"`
 }
+
+// LocationManagementResponsibility says who operates the control plane for a
+// location.
+//
+// +kubebuilder:validation:Enum=Platform;Self
+type LocationManagementResponsibility string
+
+const (
+	// LocationManagedByPlatform means the platform operator runs the control
+	// plane for the location, and you consume it as a managed service.
+	LocationManagedByPlatform LocationManagementResponsibility = "Platform"
+
+	// LocationManagedBySelf means whoever registered the location runs its
+	// control plane themselves. The platform records the location and publishes
+	// it, but does not operate it.
+	LocationManagedBySelf LocationManagementResponsibility = "Self"
+)
 
 // Coordinates describes a geographic point in decimal degrees (WGS 84).
 //
@@ -60,31 +83,6 @@ type Coordinates struct {
 	Longitude string `json:"longitude"`
 }
 
-type LocationProvider struct {
-	GCP *GCPLocationProvider `json:"gcp,omitempty"`
-}
-
-type GCPLocationProvider struct {
-	// The GCP project servicing the location
-	//
-	// For locations with the class of `datum-managed`, a service account will be
-	// required for each unique GCP project ID across all locations registered in a
-	// namespace.
-	//
-	// +kubebuilder:validation:Required
-	ProjectID string `json:"projectId,omitempty"`
-
-	// The GCP region servicing the location
-	//
-	// +kubebuilder:validation:Required
-	Region string `json:"region,omitempty"`
-
-	// The GCP zone servicing the location
-	//
-	// +kubebuilder:validation:Required
-	Zone string `json:"zone,omitempty"`
-}
-
 // LocationStatus defines the observed state of Location.
 type LocationStatus struct {
 	// Represents the observations of a location's current state.
@@ -95,12 +93,20 @@ type LocationStatus struct {
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Class",type="string",JSONPath=".spec.locationClassName"
+// +kubebuilder:printcolumn:name="Managed By",type="string",JSONPath=".spec.managedBy"
 // +kubebuilder:printcolumn:name="City",type="string",JSONPath=`.spec.topology.topology\.datum\.net/city-code`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status"
 // +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].reason"
 
-// Location is the Schema for the locations API.
+// Location is a place the platform serves traffic or runs workloads from,
+// typically a city rather than a cloud vendor's region.
+//
+// Operators declare Locations once, on the platform control plane. The same
+// kind then appears in your project's control plane for every location you can
+// actually use, and on each cell as a ServingLocation telling it where it sits.
+// A Location in your control plane is the statement that the location is
+// offered to you; edit the platform copy, not the projections.
 type Location struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

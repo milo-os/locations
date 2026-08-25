@@ -4,25 +4,22 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.4
-  name: locationbindings.locations.miloapis.com
+  name: locationclasses.locations.miloapis.com
 spec:
   group: locations.miloapis.com
   names:
-    kind: LocationBinding
-    listKind: LocationBindingList
-    plural: locationbindings
-    singular: locationbinding
+    kind: LocationClass
+    listKind: LocationClassList
+    plural: locationclasses
+    singular: locationclass
   scope: Cluster
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.locationRef.name
-      name: Location
+    - jsonPath: .spec.controllerName
+      name: Controller
       type: string
-    - jsonPath: .spec.locationClassName
-      name: Class
-      type: string
-    - jsonPath: .status.conditions[?(@.type=="Available")].status
-      name: Available
+    - jsonPath: .status.conditions[?(@.type=="Accepted")].status
+      name: Accepted
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -31,10 +28,16 @@ spec:
     schema:
       openAPIV3Schema:
         description: |-
-          LocationBinding is the Schema for the locationbindings API. It is a
-          cluster-scoped projection of a cluster-scoped Location into a project's
-          virtual control plane, created once the location's class is supported, the
-          Location is Ready, and the corresponding ServiceAvailability is Available.
+          LocationClass is a kind of location the platform can offer.
+
+          A Location says where; its class says what backs it. The class names the
+          controller that brings locations of that kind up, and points at the
+          provider's configuration for the capacity behind them. Two locations in the
+          same city with different classes are different products.
+
+          Classes are declared by whoever supplies the capacity. If you are placing
+          workloads, you pick a class by name on a Location and read its Accepted
+          condition to know it is usable; you do not create classes yourself.
         properties:
           apiVersion:
             description: |-
@@ -54,44 +57,80 @@ spec:
           metadata:
             type: object
           spec:
-            description: LocationBindingSpec defines the desired state of LocationBinding.
+            description: LocationClassSpec describes a kind of location the platform
+              can offer.
             properties:
-              displayName:
-                description: DisplayName is a human-readable label for the location.
-                type: string
-              locationClassName:
-                description: LocationClassName mirrors spec.locationClassName from
-                  the referenced Location.
-                type: string
-              locationRef:
-                description: LocationRef references the canonical cluster-scoped Location
-                  object.
-                properties:
-                  name:
-                    default: ""
-                    description: |-
-                      Name of the referent.
-                      This field is effectively required, but due to backwards compatibility is
-                      allowed to be empty. Instances of this type with an empty value here are
-                      almost certainly wrong.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                    type: string
-                type: object
-                x-kubernetes-map-type: atomic
-              topology:
-                additionalProperties:
-                  type: string
+              controllerName:
                 description: |-
-                  Topology mirrors spec.topology from the referenced Location, containing
-                  well-known keys like topology.datum.net/city-code and topology.datum.net/region.
+                  ControllerName is the controller that reconciles Locations of this class.
+                  It reads as a domain-qualified path, for example
+                  `locations.miloapis.com/shared-edge`.
+
+                  Only the controller named here acts on a Location of this class. Every
+                  other controller ignores it, so two providers can serve locations side by
+                  side in the same control plane without contending for the same objects.
+
+                  You cannot change this field after creation. Retarget a class by creating
+                  a new one and moving Locations across.
+                maxLength: 253
+                minLength: 1
+                type: string
+                x-kubernetes-validations:
+                - message: controllerName is immutable
+                  rule: self == oldSelf
+              parametersRef:
+                description: |-
+                  ParametersRef points at a resource holding the provider's own
+                  configuration for this class: which capacity backs it, and whatever else
+                  that provider needs to stand a location up. The shape of that resource is
+                  the provider's to define, and this API makes no claim about it.
+
+                  The resource is owned by the provider, not by you. Read it to understand
+                  what a class offers; expect writes to be rejected.
+
+                  Leave it unset for a class that needs no configuration. If it is set and
+                  the resource cannot be read, or does not carry what the controller needs,
+                  the class reports Accepted=False with reason InvalidParameters and no
+                  Location of this class comes up.
+                properties:
+                  group:
+                    description: |-
+                      Group is the API group of the referent, for example
+                      `compute.miloapis.com`. Use the empty string for the core API group.
+                    maxLength: 253
+                    type: string
+                  kind:
+                    description: Kind is the kind of the referent, for example `EdgeCapacityPool`.
+                    maxLength: 63
+                    minLength: 1
+                    type: string
+                  name:
+                    description: Name is the name of the referent.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                required:
+                - group
+                - kind
+                - name
                 type: object
             required:
-            - locationRef
+            - controllerName
             type: object
           status:
-            description: LocationBindingStatus defines the observed state of LocationBinding.
+            description: |-
+              LocationClassStatus reports what the controller behind a class has made of
+              it.
             properties:
               conditions:
+                description: |-
+                  Conditions describe the current state of the class.
+
+                  `Accepted` tells you whether the controller named in spec.controllerName
+                  has taken the class on. Until it is True, Locations of this class do
+                  nothing. A class no controller recognises stays Accepted=Unknown with
+                  reason Pending, which is what you see when the class names a controller
+                  that is not running.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.

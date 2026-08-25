@@ -3,7 +3,7 @@
 # It should be run by an overlay under config/overlays/
 resources:
 - bases/locations.miloapis.com_locations.yaml
-- bases/locations.miloapis.com_locationbindings.yaml
+- bases/locations.miloapis.com_locationclasses.yaml
 - bases/locations.miloapis.com_servinglocations.yaml
 # +kubebuilder:scaffold:crdkustomizelocation
 
