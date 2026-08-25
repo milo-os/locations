@@ -16,12 +16,15 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	locationsv1alpha1 "go.miloapis.com/locations/api/v1alpha1"
 	"go.miloapis.com/locations/internal/config"
+	"go.miloapis.com/locations/internal/controller"
 	webhookv1alpha1 "go.miloapis.com/locations/internal/webhook/v1alpha1"
 )
 
@@ -79,6 +82,10 @@ func newOperatorCommand(info BuildInfo) *cobra.Command {
 
 			setupLog.Info("server config loaded", "kubeconfigPath", serverConfig.KubeconfigPath)
 
+			if err := serverConfig.Validate(); err != nil {
+				return fmt.Errorf("invalid server config: %w", err)
+			}
+
 			cfg, err := serverConfig.RestConfig()
 			if err != nil {
 				return fmt.Errorf("loading rest config: %w", err)
@@ -115,6 +122,16 @@ func newOperatorCommand(info BuildInfo) *cobra.Command {
 				return fmt.Errorf("starting manager: %w", err)
 			}
 
+			if serverConfig.LocationPublisher.Enabled() {
+				if err := setupLocationPublisher(serverConfig, mgr); err != nil {
+					return fmt.Errorf("creating location publisher: %w", err)
+				}
+				setupLog.Info("location publisher enabled",
+					"hubKubeconfigPath", serverConfig.LocationPublisher.HubKubeconfigPath)
+			} else {
+				setupLog.Info("locationPublisher.hubKubeconfigPath not set; publishing disabled")
+			}
+
 			if err = webhookv1alpha1.SetupWebhookWithManager(mgr); err != nil {
 				return fmt.Errorf("creating Location webhook: %w", err)
 			}
@@ -148,4 +165,53 @@ func newOperatorCommand(info BuildInfo) *cobra.Command {
 	cmd.Flags().AddGoFlagSet(zapFlags)
 
 	return cmd
+}
+
+// leaderElectedRunnable states a runnable's leader-election intent explicitly.
+type leaderElectedRunnable struct {
+	manager.Runnable
+	leaderElected bool
+}
+
+func (r leaderElectedRunnable) NeedLeaderElection() bool { return r.leaderElected }
+
+// setupLocationPublisher connects the publisher to the control plane it reads
+// Locations from and the federation hub it writes copies to. Both connections
+// run only on the leader.
+func setupLocationPublisher(serverConfig config.LocationOperator, mgr manager.Manager) error {
+	sourceRestConfig, err := serverConfig.LocationPublisher.SourceRestConfig(serverConfig.KubeconfigPath)
+	if err != nil {
+		return fmt.Errorf("loading the location source kubeconfig: %w", err)
+	}
+	hubRestConfig, err := serverConfig.LocationPublisher.HubRestConfig()
+	if err != nil {
+		return fmt.Errorf("loading the federation hub kubeconfig: %w", err)
+	}
+
+	sourceCluster, err := cluster.New(sourceRestConfig, func(o *cluster.Options) {
+		o.Scheme = scheme
+	})
+	if err != nil {
+		return fmt.Errorf("constructing the location source cluster: %w", err)
+	}
+
+	hubCluster, err := cluster.New(hubRestConfig, func(o *cluster.Options) {
+		o.Scheme = scheme
+		o.Client = client.Options{Cache: &client.CacheOptions{Unstructured: true}}
+	})
+	if err != nil {
+		return fmt.Errorf("constructing the federation hub cluster: %w", err)
+	}
+
+	for _, c := range []cluster.Cluster{sourceCluster, hubCluster} {
+		if err := mgr.Add(leaderElectedRunnable{Runnable: c, leaderElected: true}); err != nil {
+			return fmt.Errorf("adding a location publisher cluster: %w", err)
+		}
+	}
+
+	return (&controller.LocationPublisherReconciler{
+		Config:        serverConfig,
+		SourceCluster: sourceCluster,
+		HubCluster:    hubCluster,
+	}).SetupWithManager(mgr)
 }

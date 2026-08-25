@@ -25,4 +25,12 @@ func SetObjectDefaults_LocationOperator(in *LocationOperator) {
 		SetDefaults_WebhookServerConfig(in.WebhookServer)
 		SetDefaults_TLSConfig(&in.WebhookServer.TLS)
 	}
+	SetDefaults_LocationPublisherConfig(&in.LocationPublisher)
+	SetDefaults_ClientConnectionConfig(&in.LocationPublisher.Client)
+	if in.LocationPublisher.Client.QPS == 0 {
+		in.LocationPublisher.Client.QPS = 50
+	}
+	if in.LocationPublisher.Client.Burst == 0 {
+		in.LocationPublisher.Client.Burst = 100
+	}
 }

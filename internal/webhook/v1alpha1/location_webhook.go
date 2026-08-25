@@ -4,9 +4,7 @@ package webhook
 
 import (
 	"context"
-	"fmt"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -20,8 +18,7 @@ var locationLog = logf.Log.WithName("location-webhook")
 func SetupWebhookWithManager(mgr ctrl.Manager) error {
 	webhook := &locationWebhook{}
 
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&locationsv1alpha1.Location{}).
+	return ctrl.NewWebhookManagedBy(mgr, &locationsv1alpha1.Location{}).
 		WithDefaulter(webhook).
 		WithValidator(webhook).
 		Complete()
@@ -33,66 +30,29 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 
 type locationWebhook struct{}
 
-var _ admission.CustomDefaulter = &locationWebhook{}
-var _ admission.CustomValidator = &locationWebhook{}
+var _ admission.Defaulter[*locationsv1alpha1.Location] = &locationWebhook{}
+var _ admission.Validator[*locationsv1alpha1.Location] = &locationWebhook{}
 
-// Default implements admission.CustomDefaulter.
-func (r *locationWebhook) Default(ctx context.Context, obj runtime.Object) error {
-	location, ok := obj.(*locationsv1alpha1.Location)
-	if !ok {
-		return fmt.Errorf("unexpected type %T", obj)
-	}
-
+// Default implements admission.Defaulter.
+func (r *locationWebhook) Default(ctx context.Context, location *locationsv1alpha1.Location) error {
 	locationLog.Info("defaulting", "name", location.GetName())
-
-	// TODO: add defaulting logic here
-
 	return nil
 }
 
-// ValidateCreate implements admission.CustomValidator.
-func (r *locationWebhook) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	location, ok := obj.(*locationsv1alpha1.Location)
-	if !ok {
-		return nil, fmt.Errorf("unexpected type %T", obj)
-	}
-
+// ValidateCreate implements admission.Validator.
+func (r *locationWebhook) ValidateCreate(ctx context.Context, location *locationsv1alpha1.Location) (admission.Warnings, error) {
 	locationLog.Info("validating create", "name", location.GetName())
-
-	// TODO: add validation logic here
-
 	return nil, nil
 }
 
-// ValidateUpdate implements admission.CustomValidator.
-func (r *locationWebhook) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	_, ok := oldObj.(*locationsv1alpha1.Location)
-	if !ok {
-		return nil, fmt.Errorf("unexpected type %T", oldObj)
-	}
-
-	newLocation, ok := newObj.(*locationsv1alpha1.Location)
-	if !ok {
-		return nil, fmt.Errorf("unexpected type %T", newObj)
-	}
-
+// ValidateUpdate implements admission.Validator.
+func (r *locationWebhook) ValidateUpdate(ctx context.Context, oldLocation, newLocation *locationsv1alpha1.Location) (admission.Warnings, error) {
 	locationLog.Info("validating update", "name", newLocation.GetName())
-
-	// TODO: add validation logic here
-
 	return nil, nil
 }
 
-// ValidateDelete implements admission.CustomValidator.
-func (r *locationWebhook) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	location, ok := obj.(*locationsv1alpha1.Location)
-	if !ok {
-		return nil, fmt.Errorf("unexpected type %T", obj)
-	}
-
+// ValidateDelete implements admission.Validator.
+func (r *locationWebhook) ValidateDelete(ctx context.Context, location *locationsv1alpha1.Location) (admission.Warnings, error) {
 	locationLog.Info("validating delete", "name", location.GetName())
-
-	// TODO: add validation logic here
-
 	return nil, nil
 }
