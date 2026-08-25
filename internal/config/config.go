@@ -21,7 +21,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -33,10 +32,6 @@ type LocationOperator struct {
 
 	MetricsServer MetricsServerConfig `json:"metricsServer"`
 
-	// WebhookServer configures the admission webhook server. When unset, the
-	// manager runs without an admission webhook server and no serving cert
-	// is required.
-	WebhookServer *WebhookServerConfig `json:"webhookServer,omitempty"`
 
 	// KubeconfigPath is the path to the kubeconfig file pointing at the Milo
 	// control plane API server where locations are stored. When empty, the
@@ -67,46 +62,6 @@ func (c *LocationOperator) RestConfig() (*rest.Config, error) {
 	return clientcmd.BuildConfigFromFlags("", c.KubeconfigPath)
 }
 
-// +k8s:deepcopy-gen=true
-
-// WebhookServerConfig configures the admission webhook server.
-type WebhookServerConfig struct {
-	// Host is the address that the server will listen on.
-	// Defaults to "" - all addresses.
-	Host string `json:"host"`
-
-	// Port is the port number that the server will serve.
-	// It will be defaulted to 9443 if unspecified.
-	Port int `json:"port"`
-
-	// TLS is the TLS configuration for the webhook server.
-	TLS TLSConfig `json:"tls"`
-
-	// ClientCAName is the CA certificate name which server used to verify remote(client)'s certificate.
-	ClientCAName string `json:"clientCAName"`
-}
-
-func SetDefaults_WebhookServerConfig(obj *WebhookServerConfig) {
-	if obj.TLS.CertDir == "" {
-		obj.TLS.CertDir = filepath.Join(os.TempDir(), "k8s-webhook-server", "serving-certs")
-	}
-}
-
-func (c *WebhookServerConfig) Options(ctx context.Context, secretsClient client.Client) webhook.Options {
-	opts := webhook.Options{
-		Host:     c.Host,
-		Port:     c.Port,
-		CertDir:  c.TLS.CertDir,
-		CertName: c.TLS.CertName,
-		KeyName:  c.TLS.KeyName,
-	}
-
-	if secretRef := c.TLS.SecretRef; secretRef != nil {
-		opts.TLSOpts = c.TLS.Options(ctx, secretsClient)
-	}
-
-	return opts
-}
 
 // +k8s:deepcopy-gen=true
 

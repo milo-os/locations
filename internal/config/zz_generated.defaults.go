@@ -21,10 +21,6 @@ func SetObjectDefaults_LocationOperator(in *LocationOperator) {
 	SetDefaults_LocationOperator(in)
 	SetDefaults_MetricsServerConfig(&in.MetricsServer)
 	SetDefaults_TLSConfig(&in.MetricsServer.TLS)
-	if in.WebhookServer != nil {
-		SetDefaults_WebhookServerConfig(in.WebhookServer)
-		SetDefaults_TLSConfig(&in.WebhookServer.TLS)
-	}
 	SetDefaults_LocationPublisherConfig(&in.LocationPublisher)
 	SetDefaults_ClientConnectionConfig(&in.LocationPublisher.Client)
 	if in.LocationPublisher.Client.QPS == 0 {

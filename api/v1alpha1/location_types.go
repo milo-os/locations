@@ -94,6 +94,7 @@ type LocationStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:subresource:status
+// +kubebuilder:validation:XValidation:message="name must be at most 63 characters, because it is published as a label value",rule="size(self.metadata.name) <= 63"
 // +kubebuilder:printcolumn:name="Class",type="string",JSONPath=".spec.locationClassRef.name"
 // +kubebuilder:printcolumn:name="City",type="string",JSONPath=`.spec.topology.topology\.datum\.net/city-code`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"

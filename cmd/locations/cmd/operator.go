@@ -20,12 +20,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	locationsv1alpha1 "go.miloapis.com/locations/api/v1alpha1"
 	"go.miloapis.com/locations/internal/config"
 	"go.miloapis.com/locations/internal/controller"
-	webhookv1alpha1 "go.miloapis.com/locations/internal/webhook/v1alpha1"
 )
 
 var (
@@ -100,19 +98,10 @@ func newOperatorCommand(info BuildInfo) *cobra.Command {
 
 			metricsServerOptions := serverConfig.MetricsServer.Options(ctx, bootstrapClient)
 
-			var webhookServer webhook.Server
-			if serverConfig.WebhookServer != nil {
-				webhookServer = webhook.NewServer(
-					serverConfig.WebhookServer.Options(ctx, bootstrapClient),
-				)
-			} else {
-				setupLog.Info("webhookServer not configured; admission webhook server disabled")
-			}
 
 			mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 				Scheme:                  scheme,
 				Metrics:                 metricsServerOptions,
-				WebhookServer:           webhookServer,
 				HealthProbeBindAddress:  probeAddr,
 				LeaderElection:          enableLeaderElection,
 				LeaderElectionID:        "locations.miloapis.com",
@@ -132,9 +121,6 @@ func newOperatorCommand(info BuildInfo) *cobra.Command {
 				setupLog.Info("locationPublisher.hubKubeconfigPath not set; publishing disabled")
 			}
 
-			if err = webhookv1alpha1.SetupWebhookWithManager(mgr); err != nil {
-				return fmt.Errorf("creating Location webhook: %w", err)
-			}
 
 			if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 				return fmt.Errorf("setting up health check: %w", err)
