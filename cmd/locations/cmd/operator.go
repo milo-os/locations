@@ -98,7 +98,6 @@ func newOperatorCommand(info BuildInfo) *cobra.Command {
 
 			metricsServerOptions := serverConfig.MetricsServer.Options(ctx, bootstrapClient)
 
-
 			mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 				Scheme:                  scheme,
 				Metrics:                 metricsServerOptions,
@@ -115,6 +114,23 @@ func newOperatorCommand(info BuildInfo) *cobra.Command {
 				return fmt.Errorf("creating location class controller: %w", err)
 			}
 
+			if serverConfig.LocationReadiness.Enabled() {
+				controllerName := serverConfig.LocationReadiness.ControllerName
+				if err := (&controller.LocationReadinessReconciler{
+					ControllerName: controllerName,
+				}).SetupWithManager(mgr); err != nil {
+					return fmt.Errorf("creating location readiness controller: %w", err)
+				}
+				if err := (&controller.LocationClassAcceptedReconciler{
+					ControllerName: controllerName,
+				}).SetupWithManager(mgr); err != nil {
+					return fmt.Errorf("creating location class accepted controller: %w", err)
+				}
+				setupLog.Info("location readiness enabled", "controllerName", controllerName)
+			} else {
+				setupLog.Info("locationReadiness.controllerName not set; readiness reporting disabled")
+			}
+
 			if serverConfig.LocationPublisher.Enabled() {
 				if err := setupLocationPublisher(serverConfig, mgr); err != nil {
 					return fmt.Errorf("creating location publisher: %w", err)
@@ -124,7 +140,6 @@ func newOperatorCommand(info BuildInfo) *cobra.Command {
 			} else {
 				setupLog.Info("locationPublisher.hubKubeconfigPath not set; publishing disabled")
 			}
-
 
 			if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 				return fmt.Errorf("setting up health check: %w", err)

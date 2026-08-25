@@ -76,6 +76,22 @@ var (
 		[]string{metricLabelLocation, metricLabelReason},
 	)
 
+	locationReady = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "locations_ready",
+			Help: "1 while a claimed location reports Ready=True, 0 while it does not. Locations this controller does not claim are absent.",
+		},
+		[]string{metricLabelLocation},
+	)
+
+	locationClassAccepted = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "locations_class_accepted",
+			Help: "1 while a LocationClass naming this controller is accepted by it. Classes naming another controller are absent.",
+		},
+		[]string{metricLabelClass},
+	)
+
 	locationClassDeletionBlocked = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "locations_class_deletion_blocked",

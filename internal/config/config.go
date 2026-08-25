@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -32,7 +33,6 @@ type LocationOperator struct {
 
 	MetricsServer MetricsServerConfig `json:"metricsServer"`
 
-
 	// KubeconfigPath is the path to the kubeconfig file pointing at the Milo
 	// control plane API server where locations are stored. When empty, the
 	// controller falls back to in-cluster config / $KUBECONFIG via
@@ -42,12 +42,19 @@ type LocationOperator struct {
 	// LocationPublisher configures the controller that publishes Locations to
 	// the federation hub as ServingLocations.
 	LocationPublisher LocationPublisherConfig `json:"locationPublisher,omitempty"`
+
+	// LocationReadiness configures the controller that reports readiness on the
+	// Locations this operator claims.
+	LocationReadiness LocationReadinessConfig `json:"locationReadiness,omitempty"`
 }
 
 // Validate reports whether the operator configuration can serve.
 func (c *LocationOperator) Validate() error {
 	if err := c.LocationPublisher.Validate(); err != nil {
 		return fmt.Errorf("locationPublisher: %w", err)
+	}
+	if err := c.LocationReadiness.Validate(); err != nil {
+		return fmt.Errorf("locationReadiness: %w", err)
 	}
 	return nil
 }
@@ -61,7 +68,6 @@ func (c *LocationOperator) RestConfig() (*rest.Config, error) {
 	}
 	return clientcmd.BuildConfigFromFlags("", c.KubeconfigPath)
 }
-
 
 // +k8s:deepcopy-gen=true
 
@@ -299,6 +305,43 @@ func (c *LocationPublisherConfig) restConfig(path string) (*rest.Config, error) 
 
 	c.Client.ApplyTo(cfg)
 	return cfg, nil
+}
+
+// +k8s:deepcopy-gen=true
+
+// LocationReadinessConfig configures the controller that writes
+// status.conditions[Ready] on Locations, and status.conditions[Accepted] on the
+// LocationClasses naming this controller.
+//
+// Set controllerName to turn it on. Nothing else claims a Location: a Location
+// whose class names another controller, or whose class lives in another control
+// plane, is left untouched, so several operators can report on their own
+// locations in one control plane.
+type LocationReadinessConfig struct {
+	// ControllerName is the value a LocationClass carries in
+	// spec.controllerName for this operator to claim the Locations of that
+	// class. It reads as a domain-qualified path, for example
+	// `locations.miloapis.com/shared-edge`.
+	//
+	// Readiness reporting stays off while this is empty, and no condition is
+	// written at all.
+	ControllerName string `json:"controllerName,omitempty"`
+}
+
+func (c *LocationReadinessConfig) Enabled() bool {
+	return strings.TrimSpace(c.ControllerName) != ""
+}
+
+func (c *LocationReadinessConfig) Validate() error {
+	if !c.Enabled() {
+		return nil
+	}
+	if !strings.Contains(c.ControllerName, "/") {
+		return fmt.Errorf(
+			"controllerName %q must be domain-qualified, such as locations.miloapis.com/shared-edge",
+			c.ControllerName)
+	}
+	return nil
 }
 
 // +k8s:deepcopy-gen=true
