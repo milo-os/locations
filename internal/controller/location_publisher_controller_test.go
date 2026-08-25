@@ -99,9 +99,8 @@ func sourceLocation(name, cityCode string) *locationsv1alpha1.Location {
 	location := &locationsv1alpha1.Location{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Generation: 4},
 		Spec: locationsv1alpha1.LocationSpec{
-			LocationClassName: "shared-edge",
-			ManagedBy:         locationsv1alpha1.LocationManagedByPlatform,
-			Topology:          map[string]string{"topology.datum.net/region": "us-west-1"},
+			LocationClassRef: locationsv1alpha1.LocationClassReference{Name: "shared-edge"},
+			Topology:         map[string]string{"topology.datum.net/region": "us-west-1"},
 		},
 	}
 	if cityCode != "" {

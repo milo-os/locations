@@ -24,21 +24,41 @@ carries:
   keys you need). Workloads placed at a location inherit these, and placement
   requests that name a city are answered from them.
 - **Class** — which `LocationClass` backs it, naming the controller that brings
-  the location up and pointing at the capacity behind it.
-- **Managed by** — who operates the control plane for the location: the platform
-  (`Platform`), or whoever registered it (`Self`).
+  the location up and pointing at the capacity behind it. The reference carries
+  an optional project, so a location can name a class in its own control plane
+  or one in the provider's.
 - **Coordinates** — latitude and longitude, for anything that needs to plot the
   location on a map.
 
 Locations are declared once by whoever operates the footprint. Everything
 downstream is a projection of that declaration, never an independent copy.
 
+### Classes, and whose capacity is behind a location
+
+A `LocationClass` lives in the control plane of whoever owns the capacity it
+describes, and that placement is what tells you who the location belongs to:
+
+| Where the class lives | What it means | Who manages the class |
+|---|---|---|
+| The provider's control plane | The provider's own footprint, offered to you | The provider |
+| Your control plane | Capacity you brought — your own cloud account, your own hardware | You |
+
+So there is no separate field saying who runs a location. **Whose capacity is
+this** is answered by which control plane holds the class, and **who operates
+it** is answered by `spec.controllerName` on that class: only the controller
+named there acts on locations of that class, so several providers can serve
+locations side by side without contending for the same objects.
+
+Bringing your own capacity means declaring a class in your own control plane
+and pointing your `Location` at it — the same two objects the platform uses for
+its own footprint, no special case.
+
 ## How locations reach the people and systems that need them
 
 | Resource | Who reads it | What it is |
 |---|---|---|
 | `Location` | Platform operators | The canonical record. The only object anyone edits. |
-| `LocationClass` | Platform operators, capacity providers | A kind of location: the controller that serves it and the provider configuration behind it. |
+| `LocationClass` | Platform operators, capacity providers | A kind of location: the controller that serves it and the configuration for the capacity behind it. Lives in the control plane of whoever owns that capacity. |
 | `Location` | Consumers, in their own control plane | The same kind, projected into a project — present only once the location is ready and the service is actually offered there. |
 | `ServingLocation` | A cell, in its own cluster | A read-only copy delivered to a cluster telling it which location it serves. |
 
@@ -78,8 +98,8 @@ kind: Location
 metadata:
   name: us-east-1
 spec:
-  locationClassName: shared-edge
-  managedBy: Platform
+  locationClassRef:
+    name: shared-edge
   topology:
     topology.datum.net/city-code: IAD
     topology.datum.net/region: us-east-1

@@ -28,16 +28,21 @@ spec:
     schema:
       openAPIV3Schema:
         description: |-
-          LocationClass is a kind of location the platform can offer.
+          LocationClass is a kind of location that can be offered.
 
           A Location says where; its class says what backs it. The class names the
           controller that brings locations of that kind up, and points at the
-          provider's configuration for the capacity behind them. Two locations in the
-          same city with different classes are different products.
+          configuration for the capacity behind them. Two locations in the same city
+          with different classes are different products.
 
-          Classes are declared by whoever supplies the capacity. If you are placing
-          workloads, you pick a class by name on a Location and read its Accepted
-          condition to know it is usable; you do not create classes yourself.
+          A class lives in the control plane of whoever owns the capacity it
+          describes. Classes for the provider's own footprint live in the provider's
+          control plane: you name them from a Location, read the Accepted condition to
+          know they are usable, and do not create or edit them. If you are bringing
+          your own capacity, such as your own cloud account, you declare the class in
+          your control plane and it is yours to manage. Which control plane holds a
+          class is therefore the answer to whose capacity it is, and
+          spec.controllerName is the answer to who operates it.
         properties:
           apiVersion:
             description: |-
