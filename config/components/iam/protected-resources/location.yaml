@@ -1,0 +1,21 @@
+apiVersion: iam.miloapis.com/v1alpha1
+kind: ProtectedResource
+metadata:
+  name: locations.miloapis.com-location
+spec:
+  serviceRef:
+    name: "locations.miloapis.com"
+  kind: Location
+  plural: locations
+  singular: location
+  permissions:
+    - list
+    - get
+    - watch
+    - create
+    - update
+    - patch
+    - delete
+  parentResources:
+    - apiGroup: resourcemanager.miloapis.com
+      kind: Project
