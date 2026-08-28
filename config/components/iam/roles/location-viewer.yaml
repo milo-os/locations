@@ -1,0 +1,13 @@
+apiVersion: iam.miloapis.com/v1alpha1
+kind: Role
+metadata:
+  name: locations.miloapis.com-location-viewer
+  annotations:
+    kubernetes.io/display-name: Location Viewer
+    kubernetes.io/description: "View access to the location catalog"
+spec:
+  launchStage: Beta
+  includedPermissions:
+    - locations.miloapis.com/locations.list
+    - locations.miloapis.com/locations.get
+    - locations.miloapis.com/locations.watch
