@@ -116,10 +116,40 @@ datumctl auth update-kubeconfig --project your-project
 datumctl get locations
 ```
 
+## Asking in plain language
+
+The same answer is published to the platform assistant, so "where can I run
+this?" is a question a customer can ask in a chat rather than a query they have
+to know how to write. `locations-mcp` serves it:
+
+| Tool | What it answers |
+|---|---|
+| `locations_list(service)` | Where a named service is offered to the project asking, joined from the availability records to the `Location` each one names, with topology and readiness. |
+| `locations_get(name)` | One location in full: topology, city, coordinates, and what is reported about its readiness. |
+
+Two properties hold, and are tested:
+
+- **It reads as the caller.** The server holds no credential for anybody's
+  project. Each request's own bearer token builds the client, so a tool call can
+  never see more than the person who asked could see themselves.
+- **The project is never an argument.** It comes from the `X-Datum-Project`
+  header the authenticated caller sets, never from a tool argument a model could
+  be talked into filling in.
+
+A project that does not carry the availability or `Location` records is told so,
+by name. It is never answered with an empty list — "offered nowhere" and "nobody
+looked" call for opposite actions.
+
+Deploy it with the `config/components/locations-mcp` component; it runs the same
+image as the operator, with `command: [/locations-mcp]`, and needs a kubeconfig
+naming the platform API. `docs/agent/capability-document.json` is the document
+that publishes it to the assistant, and `docs/agent/llms-full.txt` is the
+knowledge served at `GET /llms-full.txt`.
+
 ## Development
 
 ```bash
-task build       # Build the binary
+task build       # Build the binaries
 task test        # Run tests
 task lint        # Run the linter
 task generate    # Run code generation

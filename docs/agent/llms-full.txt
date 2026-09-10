@@ -1,0 +1,98 @@
+# Where the platform runs things
+
+This service is the register of the places the platform serves from. It answers
+two questions and no others: what places exist, and which of them a given
+service is offered at for the project asking.
+
+It runs nothing and provisions nothing. Nothing here starts, stops, moves or
+resizes anything a customer owns.
+
+## A place (Location)
+
+`locations.miloapis.com/v1alpha1 Location` is one place the platform serves
+traffic or runs work from. A place is usually a city, not a cloud vendor's
+region: `us-east-1` and `dfw` are the kind of names that appear.
+
+Names are exact and are the only handle that works. Anything that has to say
+where something should run names a place by `metadata.name`, spelled exactly as
+this service spells it. A name that is not on the list for a service can never
+be satisfied — a request that uses one waits, unplaced, instead of failing
+loudly — so take names verbatim from `locations_list` rather than inferring
+them from a city, an airport code, or a name that worked in another project.
+
+## What a place declares about itself: topology
+
+`spec.topology` is a map of keys to values describing where the place is. It is
+open-ended, and new keys can appear without anything else changing. The keys
+seen most often:
+
+- `topology.datum.net/city-code` — the city, as a short code, e.g. `IAD`,
+  `DFW`, `LHR`. Reported separately as `cityCode` by both tools, because most
+  questions about where something runs are really questions about which city.
+- `topology.datum.net/region` — a broader grouping the place belongs to, e.g.
+  `us-east-1`.
+
+Topology is what selectors match on. When someone wants "every place in
+Dallas", or "everywhere in a region", the thing being matched is exactly these
+key/value pairs, so read them off `locations_list` before writing a selector
+rather than guessing which keys exist.
+
+`spec.coordinates` is where the place sits on a map, in decimal degrees, when
+it has been recorded. `locations_get` returns it; use it for distance and
+geography questions, never for placement, which goes by name or by topology.
+
+## Two different questions: offered, and serving
+
+These are separate and both matter.
+
+**Offered** — whether a named service is available to this project at a place.
+It is recorded per (service, place) pair, and it is what `locations_list`
+filters on: the list holds only the places where the named service really is
+offered to the project that asked. A place absent from the list means one of
+two things — the service is not offered there at all, or this project is not
+entitled to it there — and in both cases the answer is the same: it cannot be
+used, and asking for it will not make it work.
+
+**Serving** — whether the place itself is up and taking work right now,
+reported as `ready`. A place can be offered and not ready: it is a real place
+the project may use, but nothing will start there until it recovers.
+
+So the useful reading is:
+
+- offered and `ready: true` — usable now.
+- offered and `ready: false` — a real choice, but not right now. Worth saying
+  out loud before promising anything will start there. Somewhere else may be
+  the better answer today.
+- not on the list at all — not a choice. Do not suggest it, and do not write it
+  into anything.
+
+`locations_get` adds `readyReason` and `readyMessage` for a place that is not
+serving. Both empty means nothing has been reported either way, which is not
+the same as a reported failure: it means the answer is not yet known, so say
+that rather than describing it as broken.
+
+## Choosing a place
+
+1. Call `locations_list` with the service, e.g. `compute`. The project is taken
+   from the request, never from an argument, so there is nothing to pass and
+   nothing to guess.
+2. Prefer a place that is offered and serving.
+3. Narrow by what the person actually asked for — a city, a region, closeness
+   to their users — using `cityCode` and `topology`, and `coordinates` from
+   `locations_get` when the question is about distance.
+4. Use the name verbatim.
+
+An empty list is a real answer, not a failure: the service is offered nowhere
+this project can use. Say so plainly, and say that it is the current answer
+rather than a lookup that went wrong.
+
+A refusal is not an empty list. If either tool reports that the records
+answering the question are missing, nothing was actually looked at. Do not
+report that as "no places" — say the question could not be asked, repeat which
+record was missing, and make clear the person who asked did nothing wrong.
+
+## What these tools cannot do
+
+Both tools are read-only. There is no tool here that adds a place, changes one,
+takes one out of service, or moves work between places. If someone wants any of
+that, the answer is who to ask, not an attempt.

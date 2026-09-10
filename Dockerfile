@@ -18,6 +18,8 @@ RUN go mod download
 COPY cmd/ cmd/
 COPY api/ api/
 COPY internal/ internal/
+# The knowledge document locations-mcp serves is embedded from here.
+COPY docs/ docs/
 
 # Build
 ENV GOCACHE=/root/.cache/go-build
@@ -32,10 +34,23 @@ RUN --mount=type=cache,target=/go/pkg/mod/ \
       -X main.buildDate=${BUILD_DATE}" \
     -o locations ./cmd/locations
 
-# Use distroless as minimal base image to package the locations binary
+# The MCP server ships in the same image as the operator: the two are released
+# together and read the same API types. A Deployment picks one with `command`.
+RUN --mount=type=cache,target=/go/pkg/mod/ \
+  --mount=type=cache,target="/root/.cache/go-build" \
+  CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build \
+    -ldflags "-s -w \
+      -X main.version=${VERSION} \
+      -X main.gitCommit=${GIT_COMMIT} \
+      -X main.gitTreeState=${GIT_TREE_STATE} \
+      -X main.buildDate=${BUILD_DATE}" \
+    -o locations-mcp ./cmd/locations-mcp
+
+# Use distroless as minimal base image to package the locations binaries
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 COPY --from=builder /workspace/locations .
+COPY --from=builder /workspace/locations-mcp .
 USER 65532:65532
 
 ENTRYPOINT ["/locations"]

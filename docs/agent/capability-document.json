@@ -1,0 +1,35 @@
+{
+  "apiVersion": "services.miloapis.com/v1alpha1",
+  "kind": "AgentBinding",
+  "metadata": {
+    "name": "locations-binding"
+  },
+  "spec": {
+    "serviceRef": {
+      "name": "locations"
+    },
+    "serviceName": "locations.miloapis.com",
+    "knowledge": {
+      "sources": [
+        {
+          "type": "LLMDocs",
+          "title": "Where the platform runs things",
+          "url": "http://locations-mcp.locations-system.svc.cluster.local:8080/llms-full.txt"
+        }
+      ]
+    },
+    "tools": {
+      "mcpServers": [
+        {
+          "name": "locations",
+          "endpoint": "http://locations-mcp.locations-system.svc.cluster.local:8080/mcp",
+          "toolSelector": {
+            "include": [
+              "locations_list"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

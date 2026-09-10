@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - service_account.yaml
+  - deployment.yaml
+  - service.yaml
+
+# Both binaries live in one image, so this names the same image the operator
+# runs. Append this directory to `image-overlays` in
+# .github/workflows/publish.yaml to have a release pin it the same way it pins
+# config/base/manager; until then a deployer's overlay owns the tag.
+images:
+  - name: ghcr.io/milo-os/locations
+    newTag: latest

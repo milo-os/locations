@@ -75,7 +75,7 @@ tasks:
     silent: true
 
   build:
-    desc: Build the locations binary
+    desc: Build the locations binaries
     cmds:
       - |
         set -e
@@ -92,13 +92,15 @@ tasks:
 
         echo "Version: ${VERSION}, Commit: ${GIT_COMMIT:0:7}, Tree: ${GIT_TREE_STATE}"
 
-        go build \
-          -ldflags="-X 'main.version=${VERSION}' \
-                    -X 'main.gitCommit=${GIT_COMMIT}' \
-                    -X 'main.gitTreeState=${GIT_TREE_STATE}' \
-                    -X 'main.buildDate=${BUILD_DATE}'" \
-          -o {{.TOOL_DIR}}/locations ./cmd/locations
-        echo "Binary built: {{.TOOL_DIR}}/locations"
+        for binary in locations locations-mcp; do
+          go build \
+            -ldflags="-X 'main.version=${VERSION}' \
+                      -X 'main.gitCommit=${GIT_COMMIT}' \
+                      -X 'main.gitTreeState=${GIT_TREE_STATE}' \
+                      -X 'main.buildDate=${BUILD_DATE}'" \
+            -o {{.TOOL_DIR}}/${binary} ./cmd/${binary}
+          echo "Binary built: {{.TOOL_DIR}}/${binary}"
+        done
     silent: true
 
   test:
