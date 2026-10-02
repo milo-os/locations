@@ -5,7 +5,9 @@ package cmd
 import (
 	"flag"
 	"fmt"
+	"net"
 	"os"
+	"time"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
@@ -14,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -99,12 +102,14 @@ func newOperatorCommand(info BuildInfo) *cobra.Command {
 			metricsServerOptions := serverConfig.MetricsServer.Options(ctx, bootstrapClient)
 
 			mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-				Scheme:                  scheme,
-				Metrics:                 metricsServerOptions,
-				HealthProbeBindAddress:  probeAddr,
-				LeaderElection:          enableLeaderElection,
-				LeaderElectionID:        "locations.miloapis.com",
-				LeaderElectionNamespace: leaderElectionNamespace,
+				Scheme:                        scheme,
+				Metrics:                       metricsServerOptions,
+				HealthProbeBindAddress:        probeAddr,
+				LeaderElection:                enableLeaderElection,
+				LeaderElectionID:              "locations.miloapis.com",
+				LeaderElectionNamespace:       leaderElectionNamespace,
+				LeaderElectionConfig:          leaderElectionRestConfig(cfg),
+				LeaderElectionReleaseOnCancel: true,
 			})
 			if err != nil {
 				return fmt.Errorf("starting manager: %w", err)
@@ -170,6 +175,23 @@ func newOperatorCommand(info BuildInfo) *cobra.Command {
 	cmd.Flags().AddGoFlagSet(zapFlags)
 
 	return cmd
+}
+
+const (
+	leaderElectionQPS   = 5
+	leaderElectionBurst = 10
+)
+
+func leaderElectionRestConfig(base *rest.Config) *rest.Config {
+	cfg := rest.CopyConfig(base)
+	cfg.RateLimiter = nil
+	cfg.QPS = leaderElectionQPS
+	cfg.Burst = leaderElectionBurst
+	cfg.Dial = (&net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}).DialContext
+	return cfg
 }
 
 // leaderElectedRunnable states a runnable's leader-election intent explicitly.
