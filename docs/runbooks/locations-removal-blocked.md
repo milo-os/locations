@@ -53,3 +53,12 @@ hub copy. This removes the location from every cluster that still serves it:
 ```shell
 kubectl annotate servinglocation LOCATION networking.datumapis.com/removal-override=true
 ```
+
+## Why the rule usually selects no series
+
+`locations_removal_blocked` exists only while a removal is blocked: the
+publisher sets it when the guard refuses a delete and removes it once the
+removal goes through. A healthy fleet has no series, so the rule carries
+`expected_no_match: "true"` to keep the new-rule and dead-rule checks from
+reporting it. Check that the operator's metrics are exported with
+`locations_retained`, which always exists.
