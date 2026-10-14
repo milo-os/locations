@@ -27,6 +27,9 @@ import (
 	locationsv1alpha1 "go.miloapis.com/locations/api/v1alpha1"
 	"go.miloapis.com/locations/internal/config"
 	"go.miloapis.com/locations/internal/controller"
+
+	"go.miloapis.com/instrumentation/buildinfo"
+	"go.miloapis.com/instrumentation/logging"
 )
 
 var (
@@ -57,7 +60,8 @@ func newOperatorCommand(info BuildInfo) *cobra.Command {
 		Use:   "operator",
 		Short: "Run the locations operator (controller-runtime manager)",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+			buildinfo.SetVersion(info.Version)
+			ctrl.SetLogger(logging.New(&opts))
 
 			setupLog := ctrl.Log.WithName("setup")
 			setupLog.Info("starting locations operator",
