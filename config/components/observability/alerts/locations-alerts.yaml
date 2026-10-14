@@ -1,0 +1,28 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: locations
+  labels:
+    app.kubernetes.io/name: locations
+spec:
+  groups:
+    - name: locations-publishing
+      rules:
+        - alert: LocationsRemovalBlocked
+          expr: |
+            max by (location) (max_over_time(locations_removal_blocked[30m])) == 1
+          for: 1d
+          labels:
+            severity: warning
+            service: control-plane
+            component: locations
+            team: platform
+            subject_kind: ServingLocation
+            subject_group: locations.miloapis.com
+            subject_namespace: ""
+            subject_name: "{{ $labels.location }}"
+          annotations:
+            summary: "Removal of ServingLocation {{ $labels.location }} has been blocked for over a day"
+            description: |
+              Location {{ $labels.location }} was deleted at the source, but its published ServingLocation is still on the federation hub because the removal guard refuses the delete. The reason is in the networking.datumapis.com/removal-blocked annotation on the ServingLocation.
+            runbook_url: "https://github.com/milo-os/locations/blob/main/docs/runbooks/locations-removal-blocked.md"
