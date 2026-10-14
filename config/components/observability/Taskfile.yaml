@@ -1,0 +1,82 @@
+version: '3'
+
+vars:
+  JSONNET_VERSION: v0.21.0
+  JB_VERSION: v0.6.0
+  PROMTOOL_VERSION: 3.5.0
+  PROMTOOL: '{{.ROOT_DIR}}/bin/promtool-{{.PROMTOOL_VERSION}}'
+  JSONNET_DIR: dashboards/jsonnet
+  GENERATED_DIR: dashboards/generated
+  ALERTS: alerts/locations-alerts.yaml
+  ALERTS_TEST: alerts/locations-alerts_test.yaml
+
+tasks:
+  verify:
+    desc: Fail if the dashboards are stale or the alert rules are invalid or fail their tests
+    cmds:
+      - task: verify-dashboards
+      - task: test-alerts
+
+  generate-dashboards:
+    desc: Compile the Jsonnet dashboards into dashboards/generated
+    deps: [vendor]
+    cmds:
+      - |
+        for src in {{.JSONNET_DIR}}/*.jsonnet; do
+          go run github.com/google/go-jsonnet/cmd/jsonnet@{{.JSONNET_VERSION}} -J {{.JSONNET_DIR}}/vendor "$src" \
+            > "{{.GENERATED_DIR}}/$(basename "$src" .jsonnet).json"
+        done
+
+  verify-dashboards:
+    desc: Fail if dashboards/generated differs from what the Jsonnet produces
+    deps: [vendor]
+    cmds:
+      - |
+        tmp="$(mktemp -d)"
+        trap 'rm -rf "$tmp"' EXIT
+        for src in {{.JSONNET_DIR}}/*.jsonnet; do
+          go run github.com/google/go-jsonnet/cmd/jsonnet@{{.JSONNET_VERSION}} -J {{.JSONNET_DIR}}/vendor "$src" \
+            > "$tmp/$(basename "$src" .jsonnet).json"
+        done
+        if ! diff -r "$tmp" "{{.GENERATED_DIR}}" >&2; then
+          echo "{{.GENERATED_DIR}} is stale; run task observability:generate-dashboards" >&2
+          exit 1
+        fi
+
+  test-alerts:
+    desc: Check the alert rules and run their unit tests with promtool
+    deps: [install-promtool]
+    cmds:
+      - |
+        tmp="$(mktemp -d)"
+        trap 'rm -rf "$tmp"' EXIT
+        go run github.com/mikefarah/yq/v4@v4.47.1 '.spec' {{.ALERTS}} > "$tmp/rules.yaml"
+        /bin/cp {{.ALERTS_TEST}} "$tmp/test.yaml"
+        '{{.PROMTOOL}}' check rules "$tmp/rules.yaml"
+        '{{.PROMTOOL}}' test rules "$tmp/test.yaml"
+
+  vendor:
+    internal: true
+    dir: '{{.JSONNET_DIR}}'
+    cmds:
+      - go run github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb@{{.JB_VERSION}} install
+    sources:
+      - jsonnetfile.json
+      - jsonnetfile.lock.json
+    status:
+      - test -d vendor/github.com/grafana/grafonnet
+
+  install-promtool:
+    internal: true
+    cmds:
+      - |
+        tmp="$(mktemp -d)"
+        trap 'rm -rf "$tmp"' EXIT
+        os="$(go env GOOS)"
+        arch="$(go env GOARCH)"
+        name="prometheus-{{.PROMTOOL_VERSION}}.$os-$arch"
+        curl -fsSL "https://github.com/prometheus/prometheus/releases/download/v{{.PROMTOOL_VERSION}}/$name.tar.gz" | tar -xz -C "$tmp"
+        mkdir -p "$(dirname '{{.PROMTOOL}}')"
+        mv "$tmp/$name/promtool" '{{.PROMTOOL}}'
+    status:
+      - test -x '{{.PROMTOOL}}'

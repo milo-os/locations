@@ -1,0 +1,46 @@
+rule_files:
+  - rules.yaml
+
+evaluation_interval: 1m
+
+tests:
+  - name: fires after a day blocked, across a pod restart and a reason change
+    interval: 5m
+    input_series:
+      - series: 'locations_removal_blocked{location="dfw",reason="ClustersStillServing",pod="a"}'
+        values: '1x144'
+      - series: 'locations_removal_blocked{location="dfw",reason="FleetNotFullyLabelled",pod="b"}'
+        values: '_x148 1x400'
+    alert_rule_test:
+      - eval_time: 23h
+        alertname: LocationsRemovalBlocked
+        exp_alerts: []
+      - eval_time: 25h
+        alertname: LocationsRemovalBlocked
+        exp_alerts:
+          - exp_labels:
+              location: dfw
+              severity: warning
+              service: control-plane
+              component: locations
+              team: platform
+              subject_kind: ServingLocation
+              subject_group: locations.miloapis.com
+              subject_name: dfw
+            exp_annotations:
+              summary: "Removal of ServingLocation dfw has been blocked for over a day"
+              description: |
+                Location dfw was deleted at the source, but its published ServingLocation is still on the federation hub because the removal guard refuses the delete. The reason is in the networking.datumapis.com/removal-blocked annotation on the ServingLocation.
+              runbook_url: "https://github.com/milo-os/locations/blob/main/docs/runbooks/locations-removal-blocked.md"
+
+  - name: stays quiet for a block that clears within a day, and for a zero
+    interval: 5m
+    input_series:
+      - series: 'locations_removal_blocked{location="ord",reason="ClustersStillServing",pod="a"}'
+        values: '1x240'
+      - series: 'locations_removal_blocked{location="sea",reason="ClustersStillServing",pod="a"}'
+        values: '0x400'
+    alert_rule_test:
+      - eval_time: 30h
+        alertname: LocationsRemovalBlocked
+        exp_alerts: []

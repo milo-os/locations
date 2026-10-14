@@ -1,0 +1,1008 @@
+{
+   "description": "Whether the locations operator is publishing locations to the federation hub, reporting their readiness, and reconciling: publishing, readiness, controller health and the running version.",
+   "panels": [
+      {
+         "collapsed": false,
+         "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 0
+         },
+         "id": 1,
+         "title": "At a glance",
+         "type": "row"
+      },
+      {
+         "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+         },
+         "description": "build_version reported by each running operator pod. Two values side by side mean a rollout is in progress or stuck.",
+         "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 0,
+            "y": 1
+         },
+         "id": 2,
+         "options": {
+            "colorMode": "none",
+            "graphMode": "none",
+            "reduceOptions": {
+               "calcs": [
+                  "lastNotNull"
+               ]
+            },
+            "textMode": "name"
+         },
+         "pluginVersion": "v11.4.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "count by (build_version) (instrumentation_build_info{job=~\"$job\"})",
+               "legendFormat": "{{build_version}}"
+            }
+         ],
+         "title": "Running version",
+         "type": "stat"
+      },
+      {
+         "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+         },
+         "description": "Publishable locations at the source with no published copy on the federation hub.",
+         "fieldConfig": {
+            "defaults": {
+               "color": {
+                  "mode": "thresholds"
+               },
+               "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                     {
+                        "color": "green",
+                        "value": null
+                     },
+                     {
+                        "color": "yellow",
+                        "value": 1
+                     }
+                  ]
+               },
+               "unit": "short"
+            }
+         },
+         "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 4,
+            "y": 1
+         },
+         "id": 3,
+         "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "reduceOptions": {
+               "calcs": [
+                  "lastNotNull"
+               ]
+            }
+         },
+         "pluginVersion": "v11.4.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "max(locations_publishable{job=~\"$job\"}) - max(locations_published{job=~\"$job\"})",
+               "legendFormat": ""
+            }
+         ],
+         "title": "Not published",
+         "type": "stat"
+      },
+      {
+         "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+         },
+         "description": "Published copies kept on the hub because their removal is blocked.",
+         "fieldConfig": {
+            "defaults": {
+               "color": {
+                  "mode": "thresholds"
+               },
+               "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                     {
+                        "color": "green",
+                        "value": null
+                     },
+                     {
+                        "color": "yellow",
+                        "value": 1
+                     }
+                  ]
+               },
+               "unit": "short"
+            }
+         },
+         "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 8,
+            "y": 1
+         },
+         "id": 4,
+         "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "reduceOptions": {
+               "calcs": [
+                  "lastNotNull"
+               ]
+            }
+         },
+         "pluginVersion": "v11.4.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "max(locations_retained{job=~\"$job\"})",
+               "legendFormat": ""
+            }
+         ],
+         "title": "Retained",
+         "type": "stat"
+      },
+      {
+         "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+         },
+         "description": "Locations whose hub copy the removal guard refuses to delete.",
+         "fieldConfig": {
+            "defaults": {
+               "color": {
+                  "mode": "thresholds"
+               },
+               "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                     {
+                        "color": "green",
+                        "value": null
+                     },
+                     {
+                        "color": "yellow",
+                        "value": 1
+                     }
+                  ]
+               },
+               "unit": "short"
+            }
+         },
+         "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 12,
+            "y": 1
+         },
+         "id": 5,
+         "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "reduceOptions": {
+               "calcs": [
+                  "lastNotNull"
+               ]
+            }
+         },
+         "pluginVersion": "v11.4.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "count(max by (location) (locations_removal_blocked{job=~\"$job\"}) == 1) or (0 * max(locations_retained{job=~\"$job\"}))",
+               "legendFormat": ""
+            }
+         ],
+         "title": "Removals blocked",
+         "type": "stat"
+      },
+      {
+         "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+         },
+         "description": "Source locations the publisher refuses to publish.",
+         "fieldConfig": {
+            "defaults": {
+               "color": {
+                  "mode": "thresholds"
+               },
+               "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                     {
+                        "color": "green",
+                        "value": null
+                     },
+                     {
+                        "color": "red",
+                        "value": 1
+                     }
+                  ]
+               },
+               "unit": "short"
+            }
+         },
+         "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 16,
+            "y": 1
+         },
+         "id": 6,
+         "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "reduceOptions": {
+               "calcs": [
+                  "lastNotNull"
+               ]
+            }
+         },
+         "pluginVersion": "v11.4.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "count(max by (location) (locations_publish_mismatch{job=~\"$job\"}) == 1) or (0 * max(locations_publishable{job=~\"$job\"}))",
+               "legendFormat": ""
+            }
+         ],
+         "title": "Publish mismatches",
+         "type": "stat"
+      },
+      {
+         "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+         },
+         "description": "Claimed locations reporting Ready other than True.",
+         "fieldConfig": {
+            "defaults": {
+               "color": {
+                  "mode": "thresholds"
+               },
+               "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                     {
+                        "color": "green",
+                        "value": null
+                     },
+                     {
+                        "color": "red",
+                        "value": 1
+                     }
+                  ]
+               },
+               "unit": "short"
+            }
+         },
+         "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 20,
+            "y": 1
+         },
+         "id": 7,
+         "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "reduceOptions": {
+               "calcs": [
+                  "lastNotNull"
+               ]
+            }
+         },
+         "pluginVersion": "v11.4.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "count(max by (location) (locations_ready{job=~\"$job\"}) == 0) or (0 * count(locations_ready{job=~\"$job\"}))",
+               "legendFormat": ""
+            }
+         ],
+         "title": "Locations not ready",
+         "type": "stat"
+      },
+      {
+         "collapsed": false,
+         "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 5
+         },
+         "id": 8,
+         "title": "Publishing",
+         "type": "row"
+      },
+      {
+         "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+         },
+         "description": "Locations at the source that can be published, copies the publisher owns on the hub, and copies retained by a blocked removal. Published below publishable is a location that is not reaching its cells.",
+         "fieldConfig": {
+            "defaults": {
+               "custom": {
+                  "fillOpacity": 10,
+                  "showPoints": "never",
+                  "stacking": {
+                     "mode": "none"
+                  }
+               },
+               "unit": "short"
+            }
+         },
+         "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 6
+         },
+         "id": 9,
+         "options": {
+            "legend": {
+               "calcs": [
+                  "mean",
+                  "max"
+               ],
+               "displayMode": "table",
+               "placement": "right",
+               "sortBy": "Max",
+               "sortDesc": true
+            },
+            "tooltip": {
+               "mode": "multi",
+               "sort": "desc"
+            }
+         },
+         "pluginVersion": "v11.4.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "max(locations_publishable{job=~\"$job\"})",
+               "legendFormat": "publishable"
+            },
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "max(locations_published{job=~\"$job\"})",
+               "legendFormat": "published"
+            },
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "max(locations_retained{job=~\"$job\"})",
+               "legendFormat": "retained"
+            }
+         ],
+         "title": "Publishable, published and retained",
+         "type": "timeseries"
+      },
+      {
+         "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+         },
+         "description": "Conflicts the publisher observed, by reason. UnlabelledHubObject is a hub copy it does not own; EmptySourceList is the source returning no locations while copies are held, which stops all pruning.",
+         "fieldConfig": {
+            "defaults": {
+               "custom": {
+                  "fillOpacity": 10,
+                  "showPoints": "never",
+                  "stacking": {
+                     "mode": "none"
+                  }
+               },
+               "unit": "short"
+            }
+         },
+         "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 6
+         },
+         "id": 10,
+         "options": {
+            "legend": {
+               "calcs": [
+                  "mean",
+                  "max"
+               ],
+               "displayMode": "table",
+               "placement": "right",
+               "sortBy": "Max",
+               "sortDesc": true
+            },
+            "tooltip": {
+               "mode": "multi",
+               "sort": "desc"
+            }
+         },
+         "pluginVersion": "v11.4.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "sum by (reason) (increase(locations_publisher_conflicts_total{job=~\"$job\"}[$__rate_interval]))",
+               "legendFormat": "{{reason}}"
+            }
+         ],
+         "title": "Publisher conflicts",
+         "type": "timeseries"
+      },
+      {
+         "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+         },
+         "description": "Locations deleted at the source whose hub copy is retained, and why the removal guard refuses the delete.",
+         "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 14
+         },
+         "id": 11,
+         "pluginVersion": "v11.4.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "max by (location, reason) (locations_removal_blocked{job=~\"$job\"}) == 1",
+               "format": "table",
+               "instant": true,
+               "refId": "A"
+            }
+         ],
+         "title": "Blocked removals",
+         "transformations": [
+            {
+               "id": "organize",
+               "options": {
+                  "excludeByName": {
+                     "Time": true,
+                     "Value": true
+                  }
+               }
+            }
+         ],
+         "type": "table"
+      },
+      {
+         "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+         },
+         "description": "Source locations that cannot be published, by reason.",
+         "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 14
+         },
+         "id": 12,
+         "pluginVersion": "v11.4.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "max by (location, reason) (locations_publish_mismatch{job=~\"$job\"}) == 1",
+               "format": "table",
+               "instant": true,
+               "refId": "A"
+            }
+         ],
+         "title": "Publish mismatches",
+         "transformations": [
+            {
+               "id": "organize",
+               "options": {
+                  "excludeByName": {
+                     "Time": true,
+                     "Value": true
+                  }
+               }
+            }
+         ],
+         "type": "table"
+      },
+      {
+         "collapsed": false,
+         "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 22
+         },
+         "id": 13,
+         "title": "Readiness",
+         "type": "row"
+      },
+      {
+         "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+         },
+         "description": "Each published or claimed location: whether it reports Ready, how many Ready hub clusters are labelled for it (zero places the copy nowhere), and how long since its published content last changed.",
+         "fieldConfig": {
+            "overrides": [
+               {
+                  "matcher": {
+                     "id": "byName",
+                     "options": "Since last publish"
+                  },
+                  "properties": [
+                     {
+                        "id": "unit",
+                        "value": "s"
+                     }
+                  ]
+               }
+            ]
+         },
+         "gridPos": {
+            "h": 8,
+            "w": 14,
+            "x": 0,
+            "y": 23
+         },
+         "id": 14,
+         "options": {
+            "sortBy": [
+               {
+                  "desc": false,
+                  "displayName": "Ready"
+               }
+            ]
+         },
+         "pluginVersion": "v11.4.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "max by (location) (locations_ready{job=~\"$job\"})",
+               "format": "table",
+               "instant": true,
+               "refId": "A"
+            },
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "max by (location) (locations_matched_clusters{job=~\"$job\"})",
+               "format": "table",
+               "instant": true,
+               "refId": "B"
+            },
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "time() - max by (location) (locations_publish_timestamp_seconds{job=~\"$job\"})",
+               "format": "table",
+               "instant": true,
+               "refId": "C"
+            }
+         ],
+         "title": "Locations",
+         "transformations": [
+            {
+               "id": "merge",
+               "options": { }
+            },
+            {
+               "id": "organize",
+               "options": {
+                  "excludeByName": {
+                     "Time": true
+                  },
+                  "renameByName": {
+                     "Value #A": "Ready",
+                     "Value #B": "Matched clusters",
+                     "Value #C": "Since last publish"
+                  }
+               }
+            }
+         ],
+         "type": "table"
+      },
+      {
+         "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+         },
+         "description": "LocationClasses naming this controller: whether each is accepted, and whether a deleted class is held by its finalizer because locations still name it.",
+         "gridPos": {
+            "h": 8,
+            "w": 10,
+            "x": 14,
+            "y": 23
+         },
+         "id": 15,
+         "pluginVersion": "v11.4.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "max by (class) (locations_class_accepted{job=~\"$job\"})",
+               "format": "table",
+               "instant": true,
+               "refId": "A"
+            },
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "max by (class) (locations_class_deletion_blocked{job=~\"$job\"})",
+               "format": "table",
+               "instant": true,
+               "refId": "B"
+            }
+         ],
+         "title": "Location classes",
+         "transformations": [
+            {
+               "id": "merge",
+               "options": { }
+            },
+            {
+               "id": "organize",
+               "options": {
+                  "excludeByName": {
+                     "Time": true
+                  },
+                  "renameByName": {
+                     "Value #A": "Accepted",
+                     "Value #B": "Deletion blocked"
+                  }
+               }
+            }
+         ],
+         "type": "table"
+      },
+      {
+         "collapsed": false,
+         "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 31
+         },
+         "id": 16,
+         "title": "Controllers",
+         "type": "row"
+      },
+      {
+         "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+         },
+         "description": "Reconciles per second, split by outcome.",
+         "fieldConfig": {
+            "defaults": {
+               "custom": {
+                  "fillOpacity": 30,
+                  "showPoints": "never",
+                  "stacking": {
+                     "mode": "normal"
+                  }
+               },
+               "unit": "ops"
+            }
+         },
+         "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 32
+         },
+         "id": 17,
+         "options": {
+            "legend": {
+               "calcs": [
+                  "mean",
+                  "max"
+               ],
+               "displayMode": "table",
+               "placement": "right",
+               "sortBy": "Max",
+               "sortDesc": true
+            },
+            "tooltip": {
+               "mode": "multi",
+               "sort": "desc"
+            }
+         },
+         "pluginVersion": "v11.4.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "sum by (result) (rate(controller_runtime_reconcile_total{job=~\"$job\",controller=~\"$controller\"}[$__rate_interval]))",
+               "legendFormat": "{{result}}"
+            }
+         ],
+         "title": "Reconciles by result",
+         "type": "timeseries"
+      },
+      {
+         "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+         },
+         "description": "Failed reconciles per second for each controller.",
+         "fieldConfig": {
+            "defaults": {
+               "custom": {
+                  "fillOpacity": 10,
+                  "showPoints": "never",
+                  "stacking": {
+                     "mode": "none"
+                  }
+               },
+               "unit": "ops"
+            }
+         },
+         "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 32
+         },
+         "id": 18,
+         "options": {
+            "legend": {
+               "calcs": [
+                  "mean",
+                  "max"
+               ],
+               "displayMode": "table",
+               "placement": "right",
+               "sortBy": "Max",
+               "sortDesc": true
+            },
+            "tooltip": {
+               "mode": "multi",
+               "sort": "desc"
+            }
+         },
+         "pluginVersion": "v11.4.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "sum by (controller) (rate(controller_runtime_reconcile_errors_total{job=~\"$job\",controller=~\"$controller\"}[$__rate_interval]))",
+               "legendFormat": "{{controller}}"
+            }
+         ],
+         "title": "Reconcile errors by controller",
+         "type": "timeseries"
+      },
+      {
+         "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+         },
+         "description": "p95 time spent in one reconcile.",
+         "fieldConfig": {
+            "defaults": {
+               "custom": {
+                  "fillOpacity": 10,
+                  "showPoints": "never",
+                  "stacking": {
+                     "mode": "none"
+                  }
+               },
+               "unit": "s"
+            }
+         },
+         "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 40
+         },
+         "id": 19,
+         "options": {
+            "legend": {
+               "calcs": [
+                  "mean",
+                  "max"
+               ],
+               "displayMode": "table",
+               "placement": "right",
+               "sortBy": "Max",
+               "sortDesc": true
+            },
+            "tooltip": {
+               "mode": "multi",
+               "sort": "desc"
+            }
+         },
+         "pluginVersion": "v11.4.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "histogram_quantile(0.95, sum by (controller, le) (rate(controller_runtime_reconcile_time_seconds_bucket{job=~\"$job\",controller=~\"$controller\"}[$__rate_interval])))",
+               "legendFormat": "{{controller}}"
+            }
+         ],
+         "title": "Reconcile time p95 by controller",
+         "type": "timeseries"
+      },
+      {
+         "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+         },
+         "description": "Items waiting to be reconciled.",
+         "fieldConfig": {
+            "defaults": {
+               "custom": {
+                  "fillOpacity": 10,
+                  "showPoints": "never",
+                  "stacking": {
+                     "mode": "none"
+                  }
+               },
+               "unit": "short"
+            }
+         },
+         "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 40
+         },
+         "id": 20,
+         "options": {
+            "legend": {
+               "calcs": [
+                  "mean",
+                  "max"
+               ],
+               "displayMode": "table",
+               "placement": "right",
+               "sortBy": "Max",
+               "sortDesc": true
+            },
+            "tooltip": {
+               "mode": "multi",
+               "sort": "desc"
+            }
+         },
+         "pluginVersion": "v11.4.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "sum by (controller) (workqueue_depth{job=~\"$job\",controller=~\"$controller\"})",
+               "legendFormat": "{{controller}}"
+            }
+         ],
+         "title": "Queue depth",
+         "type": "timeseries"
+      }
+   ],
+   "refresh": "1m",
+   "schemaVersion": 39,
+   "tags": [
+      "locations",
+      "milo"
+   ],
+   "templating": {
+      "list": [
+         {
+            "label": "Data Source",
+            "name": "datasource",
+            "query": "prometheus",
+            "type": "datasource"
+         },
+         {
+            "datasource": {
+               "type": "prometheus",
+               "uid": "${datasource}"
+            },
+            "label": "Job",
+            "name": "job",
+            "query": "label_values(controller_runtime_reconcile_total{controller=~\"location_.*\"}, job)",
+            "refresh": 2,
+            "sort": 1,
+            "type": "query"
+         },
+         {
+            "current": {
+               "selected": false,
+               "text": [
+                  "All"
+               ],
+               "value": [
+                  "$__all"
+               ]
+            },
+            "datasource": {
+               "type": "prometheus",
+               "uid": "${datasource}"
+            },
+            "includeAll": true,
+            "label": "Controller",
+            "multi": true,
+            "name": "controller",
+            "query": "label_values(controller_runtime_reconcile_total{job=~\"$job\"}, controller)",
+            "refresh": 2,
+            "sort": 1,
+            "type": "query"
+         }
+      ]
+   },
+   "time": {
+      "from": "now-6h",
+      "to": "now"
+   },
+   "timezone": "utc",
+   "title": "Locations",
+   "uid": "locations"
+}

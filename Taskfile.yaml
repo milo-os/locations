@@ -17,6 +17,9 @@ includes:
     taskfile: https://raw.githubusercontent.com/datum-cloud/test-infra/{{.TEST_INFRA_REPO_REF}}/Taskfile.yml
     vars:
       REPO_REF: "{{.TEST_INFRA_REPO_REF}}"
+  observability:
+    taskfile: config/components/observability/Taskfile.yaml
+    dir: config/components/observability
 
 tasks:
   default:

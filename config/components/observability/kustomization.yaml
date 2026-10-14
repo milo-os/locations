@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - alerts/locations-alerts.yaml
+  - grafana-dashboards/locations.yaml
+
+configMapGenerator:
+  - name: locations-dashboard
+    files:
+      - dashboard.json=dashboards/generated/locations.json
+    options:
+      disableNameSuffixHash: true
+      labels:
+        app.kubernetes.io/name: locations
