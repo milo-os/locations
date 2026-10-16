@@ -24,6 +24,7 @@ tests:
               service: control-plane
               component: locations
               team: platform
+              expected_no_match: "true"
               subject_kind: ServingLocation
               subject_group: locations.miloapis.com
               subject_name: dfw
