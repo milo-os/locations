@@ -7,3 +7,5 @@
 
 resources:
   - location.yaml
+  - locationclass.yaml
+  - servinglocation.yaml
