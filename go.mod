@@ -2,6 +2,8 @@ module go.miloapis.com/locations
 
 go 1.26.0
 
+toolchain go1.27.3
+
 require (
 	github.com/prometheus/client_golang v1.24.0
 	github.com/spf13/cobra v1.10.2
